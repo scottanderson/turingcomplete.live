@@ -44,23 +44,24 @@ function activateButton(text, hash) {
     if (e.textContent == text) {
       // console.log("Found button for " + hash);
       button = e;
-      break;
+    } else {
+      e.className = "btn btn-outline-primary";
     }
   }
 
   if (button == null) {
     // Create a new button
     var button = document.createElement("button");
-    button.className = "btn btn-success mr-1";
     button.setAttribute("onclick", "window.location.hash='" + hash + "'");
     var buttonText = document.createTextNode(text);
     button.appendChild(buttonText);
     container.appendChild(button);
     container.appendChild(document.createTextNode(" "));
   }
+  button.className = "btn btn-primary";
 
   // Move it to the front
-  container.insertBefore(button, container.childNodes[5]);
+  //container.insertBefore(button, container.childNodes[5]);
 }
 
 // ---------------------------------------------------------
@@ -293,7 +294,7 @@ function buildTable(heading, headers, rows) {
   title.appendChild(titleText);
 
   var tbl = document.createElement("table");
-  tbl.className = "table table-striped";
+  tbl.className = "table table-striped w-auto";
   var tblBody = document.createElement("tbody");
   var tblHead = document.createElement("thead");
 
