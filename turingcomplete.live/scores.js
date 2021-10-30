@@ -231,8 +231,8 @@ function showLevel(level_id) {
         text: solver_name
       },
       nand,
-      tick,
       delay,
+      tick,
       sum
     ]);
   }
