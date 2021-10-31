@@ -3,8 +3,11 @@ var levels = {};
 var load_complete = false;
 var level_names = {
   ai_showdown: "AI Showdown",
+  any_doubles: "Double Trouble",
   capitalize: "Planet Names",
-  flood_predictor: "Water World"
+  circumference: "Calibrating Laser Cannonts",
+  flood_predictor: "Water World",
+  tick_tock: "Counter",
 };
 
 window.addEventListener("hashchange", loadHashPage);
@@ -26,16 +29,17 @@ function loadHashPage() {
 function activateOverviewButton() {
   activateButton("Level Overview", "overview");
 }
+
 function activateLevelButton(level_id) {
-  var level_name = level_id;
-  if (level_id in level_names) level_name = level_names[level_id];
+  var level_name = level_names[level_id] || level_id;
   activateButton(level_name, level_id);
 }
+
 function activatePlayerButton(player_id) {
-  var player_name = player_id;
-  if (player_id in user_ids) player_name = user_ids[player_id];
+  var player_name = user_ids[player_id] || player_id;
   activateButton(player_name, player_id);
 }
+
 function activateButton(text, hash) {
   var container = document.getElementById("button-container");
   var button = null;
@@ -136,9 +140,9 @@ function showLevels() {
   activateOverviewButton();
   var heading = "Level Overview";
   var headers = [
-    "Level ID",
-    "Level Name",
+    "Level",
     "Solvers",
+    "First",
     "Best",
     "Average",
     "Worst"
@@ -155,28 +159,40 @@ function showLevels() {
   });
   for (level_id in sorted_levels) {
     level_id = sorted_levels[level_id];
-    var level_name = "";
-    if (level_id in level_names) level_name = level_names[level_id];
+    var level_name = level_names[level_id] || level_id;
     var solvers = Object.keys(levels[level_id]);
     var num_solvers = solvers.length;
 
     var sums = solvers.map((s) => levels[level_id][s]["sum"]);
     sums = sums.filter((s) => parseInt(s) < 99999);
-    var max, min, average;
+    var max, min, average, first;
     if (sums.length > 0) {
       max = Math.max(...sums);
       min = Math.min(...sums);
-      average = Math.floor(sums.reduce((a, b) => a + b) / sums.length);
+      if (min == 0 && max == 0) {
+        min = "-";
+        max = "-";
+        average = "-";
+        first = "-";
+      } else {
+        average = Math.floor(sums.reduce((a, b) => a + b) / sums.length);
+        first = solvers.filter((s) => levels[level_id][s]["sum"] <= min);
+        if (first.length == 1) {
+          first = user_ids[first[0]];
+        } else {
+          first = first.length;
+        }
+      }
     }
 
     rows.push([
       {
         // href: 'javascript:showLevel("' + level_id + '")',
         href: "#" + level_id,
-        text: level_id
+        text: level_name
       },
-      level_name,
       num_solvers,
+      first,
       min,
       average,
       max
@@ -189,7 +205,8 @@ function showLevels() {
 // ---------------------------------------------------------
 function showLevel(level_id) {
   activateLevelButton(level_id);
-  var heading = "Stats for " + level_id;
+  var level_name = level_names[level_id] || level_id;
+  var heading = "Stats for " + level_name;
   var headers = ["Place", "Player", "nand", "delay", "tick", "sum"];
   var rows = [];
 
@@ -244,9 +261,9 @@ function showLevel(level_id) {
 // ---------------------------------------------------------
 function showPlayer(player_id) {
   activatePlayerButton(player_id);
-  var player_name = user_ids[player_id];
+  var player_name = user_ids[player_id] || player_id;
   var heading = "Stats for " + player_name;
-  var headers = ["Level ID", "nand", "tick", "delay", "sum"];
+  var headers = ["Level", "Place", "nand", "tick", "delay", "sum"];
   var rows = [];
 
   // Sort levels by number of solvers
@@ -259,6 +276,8 @@ function showPlayer(player_id) {
   });
   for (var l in sorted_levels) {
     var level_id = sorted_levels[l];
+    var level_name = level_names[level_id] || level_id;
+    var place = "-";
     var nand = "-",
       delay = "-",
       tick = "-",
@@ -269,14 +288,23 @@ function showPlayer(player_id) {
       delay = player_score["delay"];
       tick = player_score["tick"];
       sum = player_score["sum"];
+
+      var ties = Object.keys(levels[level_id])
+        .filter(x => levels[level_id][x]["sum"] == sum)
+        .length;
+      place = Object.keys(levels[level_id])
+        .filter(x => levels[level_id][x]["sum"] < sum)
+        .length + 1;
+      if (ties > 1) place += "*";
     }
 
     rows.push([
       {
         // href: 'javascript:showLevel("' + level_id + '")',
         href: "#" + level_id,
-        text: level_id
+        text: level_name
       },
+      place,
       nand,
       delay,
       tick,
@@ -297,6 +325,7 @@ function buildTable(heading, headers, rows) {
   tbl.className = "table table-striped w-auto";
   var tblBody = document.createElement("tbody");
   var tblHead = document.createElement("thead");
+  tblHead.className = "sticky-top";
 
   var row = document.createElement("tr");
 
