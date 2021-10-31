@@ -5,3 +5,7 @@
 thead.sticky-top {
   background-color: white;
 }
+
+#content {
+  margin-top: 15px;
+}
