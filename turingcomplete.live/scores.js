@@ -282,7 +282,13 @@ function showPlayer(player_id) {
       delay = "-",
       tick = "-",
       sum = "-";
-    if (player_id in levels[level_id]) {
+    var scored = Object.keys(levels[level_id])
+      .map(x => levels[level_id][x]["sum"])
+      .filter(s => s > 0)
+      .length > 0;
+    if (!scored) {
+      place = "unscored";
+    } else if (player_id in levels[level_id]) {
       var player_score = levels[level_id][player_id];
       nand = player_score["nand"];
       delay = player_score["delay"];
