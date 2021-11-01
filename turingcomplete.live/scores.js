@@ -17,6 +17,8 @@ window.onload = refreshApiData;
 function loadHashPage() {
   if (!load_complete) return;
   var h = window.location.hash;
+  gtag('set', 'page_path', window.location.pathname+h);
+  gtag('event', 'page_view');
   if (typeof h != "string") return showLevels();
   if (!h.startsWith("#")) return showLevels();
   h = h.substring(1);
@@ -200,7 +202,7 @@ function showLevels() {
 function showLevel(level_id) {
   activateLevelButton(level_id);
   var level_name = level_names[level_id] || level_id;
-  var heading = "Stats for " + level_name;
+  var heading = "Leaderboard for " + level_name;
   var headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
   var rows = [];
 
