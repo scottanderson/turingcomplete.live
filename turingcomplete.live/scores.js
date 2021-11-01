@@ -46,7 +46,6 @@ function activateButton(text, hash) {
   for (var c in container.children) {
     var e = container.children[c];
     if (e.textContent == text) {
-      // console.log("Found button for " + hash);
       button = e;
     } else {
       e.className = "btn btn-outline-primary";
@@ -60,12 +59,8 @@ function activateButton(text, hash) {
     var buttonText = document.createTextNode(text);
     button.appendChild(buttonText);
     container.appendChild(button);
-    container.appendChild(document.createTextNode(" "));
   }
   button.className = "btn btn-primary";
-
-  // Move it to the front
-  //container.insertBefore(button, container.childNodes[5]);
 }
 
 // ---------------------------------------------------------
@@ -187,7 +182,6 @@ function showLevels() {
 
     rows.push([
       {
-        // href: 'javascript:showLevel("' + level_id + '")',
         href: "#" + level_id,
         text: level_name
       },
@@ -207,7 +201,7 @@ function showLevel(level_id) {
   activateLevelButton(level_id);
   var level_name = level_names[level_id] || level_id;
   var heading = "Stats for " + level_name;
-  var headers = ["Place", "Player", "nand", "delay", "tick", "sum"];
+  var headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
   var rows = [];
 
   // Sort solvers by lowest sum
@@ -242,12 +236,11 @@ function showLevel(level_id) {
     }
 
     rows.push([
-      place,
       {
-        // href: "javascript:showPlayer(" + solver_id + ")",
         href: "#" + solver_id,
         text: solver_name
       },
+      place,
       nand,
       delay,
       tick,
@@ -263,7 +256,7 @@ function showPlayer(player_id) {
   activatePlayerButton(player_id);
   var player_name = user_ids[player_id] || player_id;
   var heading = "Stats for " + player_name;
-  var headers = ["Level", "Place", "nand", "tick", "delay", "sum"];
+  var headers = ["Level", "Place", "# tied", "nand", "tick", "delay", "sum"];
   var rows = [];
 
   // Sort levels by number of solvers
@@ -277,7 +270,8 @@ function showPlayer(player_id) {
   for (var l in sorted_levels) {
     var level_id = sorted_levels[l];
     var level_name = level_names[level_id] || level_id;
-    var place = "-";
+    var place = "-",
+      ties = "-";
     var nand = "-",
       delay = "-",
       tick = "-",
@@ -295,22 +289,22 @@ function showPlayer(player_id) {
       tick = player_score["tick"];
       sum = player_score["sum"];
 
-      var ties = Object.keys(levels[level_id])
+      ties = Object.keys(levels[level_id])
         .filter(x => levels[level_id][x]["sum"] == sum)
         .length;
+      if (ties == 1) ties = "-";
       place = Object.keys(levels[level_id])
         .filter(x => levels[level_id][x]["sum"] < sum)
         .length + 1;
-      if (ties > 1) place += "*";
     }
 
     rows.push([
       {
-        // href: 'javascript:showLevel("' + level_id + '")',
         href: "#" + level_id,
         text: level_name
       },
       place,
+      ties,
       nand,
       delay,
       tick,
@@ -355,7 +349,6 @@ function buildTable(heading, headers, rows) {
         var cellText = document.createTextNode(rows_rc);
         cell.appendChild(cellText);
       } else {
-        // console.log(typeof rows_rc + ": " + rows_rc);
         var a = document.createElement("a");
         a.href = rows_rc["href"];
         var cellText = document.createTextNode(rows_rc["text"]);

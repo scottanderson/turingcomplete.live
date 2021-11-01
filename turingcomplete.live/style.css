@@ -9,3 +9,7 @@ thead.sticky-top {
 #content {
   margin-top: 15px;
 }
+
+.btn > i.bi {
+  font-size: 1.5rem;
+}
