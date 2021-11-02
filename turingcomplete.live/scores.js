@@ -5,8 +5,9 @@ var level_names = {
   ai_showdown: "AI Showdown",
   any_doubles: "Double Trouble",
   capitalize: "Planet Names",
-  circumference: "Calibrating Laser Cannonts",
+  circumference: "Calibrating Laser Cannons",
   flood_predictor: "Water World",
+  ram_component: "Little Box",
   tick_tock: "Counter",
 };
 
@@ -99,7 +100,7 @@ async function loadApiData() {
 }
 
 function handleUsernames(data) {
-  var usernames = data.split(/\n/);
+  var usernames = data.trim().split(/\n/);
   for (var i = 0; i < usernames.length; i++) {
     var x = usernames[i].split(/,/, 2);
     var id = x[0];
@@ -110,7 +111,7 @@ function handleUsernames(data) {
 }
 
 function handleScores(data) {
-  var scores = data.split(/\n/);
+  var scores = data.trim().split(/\n/);
   for (var i = 0; i < scores.length; i++) {
     var x = scores[i].split(/,/, 5);
     var user_id = x[0];
