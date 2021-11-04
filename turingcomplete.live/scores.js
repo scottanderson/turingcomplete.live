@@ -18,8 +18,6 @@ window.onload = refreshApiData;
 function loadHashPage() {
   if (!load_complete) return;
   var h = window.location.hash;
-  gtag('set', 'page_path', window.location.pathname+h);
-  gtag('event', 'page_view');
   if (typeof h != "string") return showLevels();
   if (!h.startsWith("#")) return showLevels();
   h = h.substring(1);
@@ -57,13 +55,81 @@ function activateButton(text, hash) {
 
   if (button == null) {
     // Create a new button
-    var button = document.createElement("button");
-    button.setAttribute("onclick", "window.location.hash='" + hash + "'");
-    var buttonText = document.createTextNode(text);
-    button.appendChild(buttonText);
+    var button = createButton(text, hash);
     container.appendChild(button);
   }
   button.className = "btn btn-primary";
+}
+
+function createButton(text, hash) {
+  var button = document.createElement("button");
+  button.setAttribute("id", "btn_" + hash);
+  button.className = "btn btn-outline-primary";
+  button.setAttribute("onclick", "window.location.hash='" + hash + "'");
+  var buttonText = document.createTextNode(text);
+  button.appendChild(buttonText);
+  return button;
+}
+
+// ---------------------------------------------------------
+function readBookmarks() {
+  var bookmarks = localStorage.getItem("bookmarks") || "flood_predictor;6;5729";
+  bookmarks = bookmarks?.split(/;/) || [];
+  return bookmarks.filter(e => e);
+}
+
+function createBookmark(bookmark) {
+  var i = document.createElement("i");
+  i.setAttribute("id", "bookmark_" + bookmark);
+  i.setAttribute("role", "img");
+  i.setAttribute("aria-label", "Bookmark");
+  i.setAttribute("onclick", "toggleBookmark('" + bookmark + "');");
+  var bookmarks = readBookmarks();
+  if (bookmarks.includes(bookmark)) {
+    i.className = "bi bi-bookmark-star";
+  } else {
+    i.className = "bi bi-bookmark";
+  }
+  return i;
+}
+
+function toggleBookmark(bookmark) {
+  var i = document.getElementById("bookmark_" + bookmark);
+  var bookmarks = readBookmarks();
+  if (bookmarks.includes(bookmark)) {
+    bookmarks = bookmarks.filter(b => b != bookmark);
+    i.className = "bi bi-bookmark";
+  } else {
+    bookmarks.push(bookmark);
+    bookmarks.sort();
+    i.className = "bi bi-bookmark-star";
+  }
+  if (bookmarks.length == 0) {
+    localStorage.removeItem("bookmarks");
+  } else {
+    localStorage.setItem("bookmarks", bookmarks.join(";"));
+  }
+}
+
+function loadBookmarks() {
+  var bookmarks = readBookmarks();
+  var container = document.getElementById("button-container");
+  for (b in bookmarks) {
+    var bookmark = bookmarks[b];
+    if (document.getElementById("btn_" + bookmark)) continue;
+    if (!isNaN(parseInt(bookmark)) && Object.keys(user_ids).includes(bookmark)) {
+      var player_name = user_ids[bookmark] || bookmark;
+      var button = createButton(player_name, bookmark);
+      container.appendChild(button);
+    } else if (bookmark == "overview") {
+    } else if (Object.keys(levels).includes(bookmark)) {
+      var level_name = level_names[bookmark] || bookmark;
+      var button = createButton(level_name, bookmark);
+      container.appendChild(button);
+    } else {
+      // console.log("Ignoring unrecognized bookmark: " + bookmark);
+    }
+  }
 }
 
 // ---------------------------------------------------------
@@ -79,6 +145,7 @@ function refreshApiData() {
       handleUsernames(usernames);
       handleScores(scores);
       load_complete = true;
+      loadBookmarks();
       loadHashPage();
     })
     .catch((error) => {
@@ -196,7 +263,7 @@ function showLevels() {
     ]);
   }
 
-  buildTable(heading, headers, rows);
+  buildTable(heading, null, headers, rows);
 }
 
 // ---------------------------------------------------------
@@ -204,6 +271,7 @@ function showLevel(level_id) {
   activateLevelButton(level_id);
   var level_name = level_names[level_id] || level_id;
   var heading = "Leaderboard for " + level_name;
+  var bookmark = createBookmark(level_id);
   var headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
   var rows = [];
 
@@ -251,7 +319,7 @@ function showLevel(level_id) {
     ]);
   }
 
-  buildTable(heading, headers, rows);
+  buildTable(heading, bookmark, headers, rows);
 }
 
 // ---------------------------------------------------------
@@ -259,6 +327,7 @@ function showPlayer(player_id) {
   activatePlayerButton(player_id);
   var player_name = user_ids[player_id] || player_id;
   var heading = "Stats for " + player_name;
+  var bookmark = createBookmark(player_id);
   var headers = ["Level", "Place", "# tied", "nand", "tick", "delay", "sum"];
   var rows = [];
 
@@ -315,14 +384,15 @@ function showPlayer(player_id) {
     ]);
   }
 
-  buildTable(heading, headers, rows);
+  buildTable(heading, bookmark, headers, rows);
 }
 
 // ---------------------------------------------------------
-function buildTable(heading, headers, rows) {
+function buildTable(heading, bookmark, headers, rows) {
   var title = document.createElement("h2");
   var titleText = document.createTextNode(heading);
   title.appendChild(titleText);
+  if (bookmark) title.appendChild(bookmark);
 
   var tbl = document.createElement("table");
   tbl.className = "table table-striped w-auto";
