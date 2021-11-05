@@ -17,7 +17,10 @@ window.onload = refreshApiData;
 // ---------------------------------------------------------
 function loadHashPage() {
   if (!load_complete) return;
-  var h = window.location.hash;
+  var h = window.location.hash || "#overview";
+  var page_path = h.replace(/^#/,"/");
+  gtag('set', 'page_path', page_path);
+  gtag('event', 'page_view');
   if (typeof h != "string") return showLevels();
   if (!h.startsWith("#")) return showLevels();
   h = h.substring(1);
@@ -99,10 +102,12 @@ function toggleBookmark(bookmark) {
   if (bookmarks.includes(bookmark)) {
     bookmarks = bookmarks.filter(b => b != bookmark);
     i.className = "bi bi-bookmark";
+    gtag("event", "remove_bookmark", {"value": bookmark});
   } else {
     bookmarks.push(bookmark);
     bookmarks.sort();
     i.className = "bi bi-bookmark-star";
+    gtag("event", "add_bookmark", {"value": bookmark});
   }
   if (bookmarks.length == 0) {
     localStorage.removeItem("bookmarks");
@@ -134,6 +139,7 @@ function loadBookmarks() {
 
 // ---------------------------------------------------------
 function refreshApiData() {
+  gtag("event", load_complete ? "refresh" : "load");
   load_complete = false;
   var title = document.createElement("h2");
   var titleText = document.createTextNode("Downloading stats...");
@@ -293,8 +299,8 @@ function showLevel(level_id) {
     var solver_name = user_ids[solver_id];
     var solver = levels[level_id][solver_id];
     var nand = solver["nand"];
-    var tick = solver["tick"];
     var delay = solver["delay"];
+    var tick = solver["tick"];
     var sum = solver["sum"];
 
     if (s > 0) {
@@ -328,7 +334,7 @@ function showPlayer(player_id) {
   var player_name = user_ids[player_id] || player_id;
   var heading = "Stats for " + player_name;
   var bookmark = createBookmark(player_id);
-  var headers = ["Level", "Place", "# tied", "nand", "tick", "delay", "sum"];
+  var headers = ["Level", "Place", "# tied", "nand", "delay", "tick", "sum"];
   var rows = [];
 
   // Sort levels by number of solvers
@@ -348,7 +354,8 @@ function showPlayer(player_id) {
       delay = "-",
       tick = "-",
       sum = "-";
-    var scored = Object.keys(levels[level_id])
+    var solvers = Object.keys(levels[level_id]);
+    var scored = solvers
       .map(x => levels[level_id][x]["sum"])
       .filter(s => s > 0)
       .length > 0;
@@ -360,13 +367,20 @@ function showPlayer(player_id) {
       delay = player_score["delay"];
       tick = player_score["tick"];
       sum = player_score["sum"];
-
-      ties = Object.keys(levels[level_id])
-        .filter(x => levels[level_id][x]["sum"] == sum)
+      var solves = solvers
+        .map(x => levels[level_id][x]);
+      var otherTickScores = solves
+        .filter(x => x["tick"] != tick)
+        .length
+      if (tick == 0 && otherTickScores == 0) {
+        tick = "-";
+      }
+      ties = solves
+        .filter(x => x["sum"] == sum)
         .length;
       if (ties == 1) ties = "-";
-      place = Object.keys(levels[level_id])
-        .filter(x => levels[level_id][x]["sum"] < sum)
+      place = solves
+        .filter(x => x["sum"] < sum)
         .length + 1;
     }
 
