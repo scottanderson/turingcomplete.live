@@ -18,20 +18,27 @@ window.onload = refreshApiData;
 function loadHashPage() {
   if (!load_complete) return;
   var h = window.location.hash || "#overview";
-  var page_path = h.replace(/^#/,"/");
-  gtag('set', 'page_path', page_path);
-  gtag('event', 'page_view');
+  var page_path = h.replace(/^#/, "/");
+  gtag("set", "page_path", page_path);
+  gtag("event", "page_view", {
+    "page_path": page_path
+  });
   if (typeof h != "string") return showLevels();
   if (!h.startsWith("#")) return showLevels();
   h = h.substring(1);
   if (!isNaN(parseInt(h))) return showPlayer(h);
   if (h == "overview") return showLevels();
+  if (h == "top_players") return showTopPlayers();
   return showLevel(h);
 }
 
 // ---------------------------------------------------------
 function activateOverviewButton() {
   activateButton("Level Overview", "overview");
+}
+
+function activateTopPlayersButton() {
+  activateButton("Top Players", "top_players");
 }
 
 function activateLevelButton(level_id) {
@@ -102,12 +109,16 @@ function toggleBookmark(bookmark) {
   if (bookmarks.includes(bookmark)) {
     bookmarks = bookmarks.filter(b => b != bookmark);
     i.className = "bi bi-bookmark";
-    gtag("event", "remove_bookmark", {"value": bookmark});
+    gtag("event", "remove_bookmark", {
+      "value": bookmark
+    });
   } else {
     bookmarks.push(bookmark);
     bookmarks.sort();
     i.className = "bi bi-bookmark-star";
-    gtag("event", "add_bookmark", {"value": bookmark});
+    gtag("event", "add_bookmark", {
+      "value": bookmark
+    });
   }
   if (bookmarks.length == 0) {
     localStorage.removeItem("bookmarks");
@@ -126,7 +137,6 @@ function loadBookmarks() {
       var player_name = user_ids[bookmark] || bookmark;
       var button = createButton(player_name, bookmark);
       container.appendChild(button);
-    } else if (bookmark == "overview") {
     } else if (Object.keys(levels).includes(bookmark)) {
       var level_name = level_names[bookmark] || bookmark;
       var button = createButton(level_name, bookmark);
@@ -221,13 +231,14 @@ function showLevels() {
   var rows = [];
 
   // Sort levels by number of solvers
-  var sorted_levels = Object.keys(levels).sort(function (x, y) {
+  var sorted_levels = Object.keys(levels).sort(function(x, y) {
     var sx = Object.keys(levels[x]).length;
     var sy = Object.keys(levels[y]).length;
     if (sx < sy) return 1;
     if (sx > sy) return -1;
     return 0;
   });
+  var bookmarks = readBookmarks();
   for (level_id in sorted_levels) {
     level_id = sorted_levels[level_id];
     var level_name = level_names[level_id] || level_id;
@@ -256,16 +267,87 @@ function showLevels() {
       }
     }
 
+    var level = {
+      href: "#" + level_id,
+      text: level_name,
+    };
+    if (bookmarks.includes(level_id)) {
+      level["img"] = "bi bi-star";
+    }
     rows.push([
-      {
-        href: "#" + level_id,
-        text: level_name
-      },
+      level,
       num_solvers,
       first,
       min,
       average,
       max
+    ]);
+  }
+
+  buildTable(heading, null, headers, rows);
+}
+
+// ---------------------------------------------------------
+function showTopPlayers() {
+  activateTopPlayersButton();
+  var heading = "Total combined scores for levels with >1000 solvers";
+  var headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
+  var rows = [];
+
+  var top_levels = Object.keys(levels)
+    .filter(l => Object.keys(levels[l]).length > 1000); // More than 1000 solvers
+
+  var top_players = Object.keys(levels[top_levels[0]])
+    .filter(p => top_levels.every(l => p in levels[l]));
+
+  var bookmarks = readBookmarks();
+  var results = top_players.map(function(player_id) {
+    var player = {
+      href: "#" + player_id,
+      text: user_ids[player_id],
+    };
+    if (bookmarks.includes(player_id)) {
+      player["img"] = "bi bi-star";
+    }
+    var s = top_levels.map(l => levels[l][player_id]);
+    return {
+      player: player,
+      nand: s.map(a => a.nand).reduce((a, b) => a + b),
+      delay: s.map(a => a.delay).reduce((a, b) => a + b),
+      tick: s.map(a => a.tick).reduce((a, b) => a + b),
+      sum: s.map(a => a.sum).reduce((a, b) => a + b),
+    };
+  }).sort(function(x, y) {
+    var sx = x.sum;
+    var sy = y.sum;
+    if (sx < sy) return -1;
+    if (sx > sy) return 1;
+    return 0;
+  });
+
+  var num_results = 0;
+  var place = 1;
+  for (var r in results) {
+    if (++num_results > 100) break; // Only show 100 results
+
+    var result = results[r];
+
+    if (r > 0) {
+      var result_above = results[r - 1];
+      var sum = result["sum"];
+      var sum_above = result_above["sum"];
+      if (sum != sum_above) {
+        place = num_results;
+      }
+    }
+
+    rows.push([
+      result["player"],
+      place,
+      result["nand"],
+      result["delay"],
+      result["tick"],
+      result["sum"],
     ]);
   }
 
@@ -282,7 +364,7 @@ function showLevel(level_id) {
   var rows = [];
 
   // Sort solvers by lowest sum
-  var sorted_solvers = Object.keys(levels[level_id]).sort(function (x, y) {
+  var sorted_solvers = Object.keys(levels[level_id]).sort(function(x, y) {
     var xs = levels[level_id][x]["sum"];
     var ys = levels[level_id][y]["sum"];
     if (xs < ys) return -1;
@@ -292,8 +374,9 @@ function showLevel(level_id) {
 
   var solves = 0;
   var place = 1;
+  var bookmarks = readBookmarks();
   for (var s in sorted_solvers) {
-    if (solves++ > 100) break; // Only show 100 results
+    if (++solves > 100) break; // Only show 100 results
 
     var solver_id = sorted_solvers[s];
     var solver_name = user_ids[solver_id];
@@ -311,12 +394,15 @@ function showLevel(level_id) {
         place = solves;
       }
     }
-
+    var player = {
+      href: "#" + solver_id,
+      text: solver_name,
+    };
+    if (bookmarks.includes(solver_id)) {
+      player["img"] = "bi bi-star";
+    }
     rows.push([
-      {
-        href: "#" + solver_id,
-        text: solver_name
-      },
+      player,
       place,
       nand,
       delay,
@@ -338,13 +424,14 @@ function showPlayer(player_id) {
   var rows = [];
 
   // Sort levels by number of solvers
-  var sorted_levels = Object.keys(levels).sort(function (x, y) {
+  var sorted_levels = Object.keys(levels).sort(function(x, y) {
     var sx = Object.keys(levels[x]).length;
     var sy = Object.keys(levels[y]).length;
     if (sx < sy) return 1;
     if (sx > sy) return -1;
     return 0;
   });
+  var bookmarks = readBookmarks();
   for (var l in sorted_levels) {
     var level_id = sorted_levels[l];
     var level_name = level_names[level_id] || level_id;
@@ -357,8 +444,7 @@ function showPlayer(player_id) {
     var solvers = Object.keys(levels[level_id]);
     var scored = solvers
       .map(x => levels[level_id][x]["sum"])
-      .filter(s => s > 0)
-      .length > 0;
+      .some(s => s > 0);
     if (!scored) {
       place = "unscored";
     } else if (player_id in levels[level_id]) {
@@ -383,12 +469,15 @@ function showPlayer(player_id) {
         .filter(x => x["sum"] < sum)
         .length + 1;
     }
-
+    var level = {
+      href: "#" + level_id,
+      text: level_name,
+    };
+    if (bookmarks.includes(level_id)) {
+      level["img"] = "bi bi-star";
+    }
     rows.push([
-      {
-        href: "#" + level_id,
-        text: level_name
-      },
+      level,
       place,
       ties,
       nand,
@@ -436,11 +525,21 @@ function buildTable(heading, bookmark, headers, rows) {
         var cellText = document.createTextNode(rows_rc);
         cell.appendChild(cellText);
       } else {
-        var a = document.createElement("a");
-        a.href = rows_rc["href"];
         var cellText = document.createTextNode(rows_rc["text"]);
-        a.appendChild(cellText);
-        cell.appendChild(a);
+        if ("href" in rows_rc) {
+          var a = document.createElement("a");
+          a.href = rows_rc["href"];
+          a.appendChild(cellText);
+          cell.appendChild(a);
+        } else {
+          cell.appendChild(cellText);
+        }
+        cell.appendChild(document.createTextNode(" "));
+        if ("img" in rows_rc) {
+          var i = document.createElement("i");
+          i.className = rows_rc["img"];
+          cell.appendChild(i);
+        }
       }
       row.appendChild(cell);
     }
