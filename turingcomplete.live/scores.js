@@ -1,15 +1,89 @@
-var user_ids = {};
-var levels = {};
-var load_complete = false;
-var level_names = {
+const user_ids = {};
+const levels = {};
+const level_names = {
   ai_showdown: "AI Showdown",
+  alu_1: "Logic Engine",
+  alu_2: "Arithmetic Engine",
+  always_on: "Always On",
+  and_gate: "AND Gate",
+  and_gate_3: "Bigger AND Gate",
   any_doubles: "Double Trouble",
+  binary_programming: "Add 5",
+  binary_racer: "Binary Racer",
+  binary_search: "Storage Cracker",
+  bit_adder: "Half Adder",
+  bit_inverter: "Bit Inverter",
+  buffer: "One Way",
+  byte_adder: "Adding Bytes",
+  byte_and: "Byte AND",
+  byte_constant: "Byte Constant",
+  byte_equal: "Equality",
+  byte_less: "Unsigned Less",
+  byte_less_i: "Signed Less",
+  byte_mux: "Input Selector",
+  byte_not: "Byte NOT",
+  byte_or: "Byte OR",
+  byte_switch: "Switch",
+  byte_xor: "Byte XOR",
+  call_ret: "Functions",
   capitalize: "Planet Names",
   circumference: "Calibrating Laser Cannons",
+  component_factory: "Component Factory",
+  compute_xor: "XOR",
+  computing_codes: "Calculations",
+  conditions: "Conditions",
+  constants: "Immediate Values",
+  counting_signals: "Counting Signals",
+  crude_awakening: "Crude Awakening",
+  dance: "Dancing Machine",
+  decoder: "Instruction Decoder",
+  delay_level: "Delay",
+  demux: "1 bit decoder",
+  demux_3: "3 bit decoder",
+  dependency: "Circular Dependency",
+  divide: "Divide",
+  double_number: "Double the Number",
   flood_predictor: "Water World",
+  full_adder: "Full Adder",
+  leg_1: "Wire Spaghetti",
+  leg_2: "Opcodes",
+  leg_3: "Immediate Values",
+  leg_4: "Conditionals",
+  maze: "The Maze",
+  mod_4: "Masking Time",
+  multiply: "The Product of Nibbles",
+  nand_gate: "NAND Gate",
+  negative_numbers: "Negative Numbers",
+  nor_gate: "NOR Gate",
+  not_gate: "NOT Gate",
+  odd_number_of_signals: "ODD Number of Signals",
+  or_gate: "OR Gate",
+  or_gate_3: "Bigger OR Gate",
+  program: "Program",
+  push_pop: "PUSH and POP",
+  ram: "RAM",
   ram_component: "Little Box",
+  registers: "Registers",
+  robot_racing: "Robot Racing",
+  saving_bytes: "Saving Bytes",
+  saving_gracefully: "Saving Gracefully",
+  second_tick: "Second Tick",
+  shift: "Shift",
+  signed_negator: "Signed negator",
+  sorter: "Delicious Order",
+  spacial_invasion: "Spacial Invasion",
+  sr_latch: "Tangled Gates",
+  stack: "Stack",
+  test_lab: "The Lab",
   tick_tock: "Counter",
+  tower: "Tower of Radioactive Alloy",
+  turing_complete: "Turing Complete",
+  unseen_fruit: "Unseen Fruit",
+  wide_instructions: "Wide Instructions",
+  xnor: "XNOR Gate",
+  xor_gate: "XOR Gate",
 };
+let load_complete = false;
 
 window.addEventListener("hashchange", loadHashPage);
 window.onload = refreshApiData;
@@ -295,6 +369,7 @@ function showTopPlayers() {
   var rows = [];
 
   var top_levels = Object.keys(levels)
+    .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)) // Scored
     .filter(l => Object.keys(levels[l]).length > 1000); // More than 1000 solvers
 
   var top_players = Object.keys(levels[top_levels[0]])
