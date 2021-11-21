@@ -2,8 +2,12 @@
   padding: 25px;
 }
 
-thead.sticky-top {
-  background-color: white;
+.light thead.sticky-top {
+  background-color: var(--bs-body-bg);
+}
+
+.dark thead.sticky-top {
+  background-color: var(--bs-body-bg-alt);
 }
 
 #content {
