@@ -317,6 +317,9 @@ function showLevels() {
     level_id = sorted_levels[level_id];
     var level_name = level_names[level_id] || level_id;
     var solvers = Object.keys(levels[level_id]);
+    var scored = solvers
+      .map(x => levels[level_id][x]["sum"])
+      .some(s => s > 0);
     var num_solvers = solvers.length;
 
     var sums = solvers.map((s) => levels[level_id][s]["sum"]);
@@ -349,7 +352,7 @@ function showLevels() {
       level["img"] = "bi bi-star";
     }
     rows.push([
-      level,
+      scored ? level : level_name,
       num_solvers,
       first,
       min,
@@ -552,7 +555,7 @@ function showPlayer(player_id) {
       level["img"] = "bi bi-star";
     }
     rows.push([
-      level,
+      scored ? level: level_name,
       place,
       ties,
       nand,
