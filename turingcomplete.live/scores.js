@@ -177,6 +177,25 @@ function createBookmark(bookmark) {
   return i;
 }
 
+function bookmarkSort(x, y) {
+  if (!isNaN(parseInt(x))) {
+    x = parseInt(x);
+    if (!isNaN(parseInt(y))) {
+      y = parseInt(y);
+      if (x < y) return -1;
+      if (x > y) return 1;
+      return 0;
+    }
+    return -1;
+  }
+  if (!isNaN(parseInt(y))) {
+    return 1;
+  }
+  if (x < y) return -1;
+  if (x > y) return 1;
+  return 0;
+}
+
 function toggleBookmark(bookmark) {
   var i = document.getElementById("bookmark_" + bookmark);
   var bookmarks = readBookmarks();
@@ -188,7 +207,7 @@ function toggleBookmark(bookmark) {
     });
   } else {
     bookmarks.push(bookmark);
-    bookmarks.sort();
+    bookmarks.sort(bookmarkSort);
     i.className = "bi bi-bookmark-star";
     gtag("event", "add_bookmark", {
       "value": bookmark
@@ -519,20 +538,17 @@ function showPlayer(player_id) {
       delay = "-",
       tick = "-",
       sum = "-";
-    var solvers = Object.keys(levels[level_id]);
-    var scored = solvers
-      .map(x => levels[level_id][x]["sum"])
-      .some(s => s > 0);
-    if (!scored) {
-      place = "unscored";
-    } else if (player_id in levels[level_id]) {
+    const solved = (player_id in levels[level_id]);
+    const solves = Object.keys(levels[level_id])
+      .map(x => levels[level_id][x]);
+    const scored = solves
+      .some(x => x["sum"] > 0);
+    if (solved && scored) {
       var player_score = levels[level_id][player_id];
       nand = player_score["nand"];
       delay = player_score["delay"];
       tick = player_score["tick"];
       sum = player_score["sum"];
-      var solves = solvers
-        .map(x => levels[level_id][x]);
       var otherTickScores = solves
         .filter(x => x["tick"] != tick)
         .length
@@ -546,6 +562,8 @@ function showPlayer(player_id) {
       place = solves
         .filter(x => x["sum"] < sum)
         .length + 1;
+    } else if (solved) {
+      place = "unscored";
     }
     var level = {
       href: "#" + level_id,
@@ -555,7 +573,7 @@ function showPlayer(player_id) {
       level["img"] = "bi bi-star";
     }
     rows.push([
-      scored ? level: level_name,
+      scored ? level : level_name,
       place,
       ties,
       nand,
