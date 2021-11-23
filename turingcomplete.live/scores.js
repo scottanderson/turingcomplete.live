@@ -103,6 +103,7 @@ function loadHashPage() {
   if (!isNaN(parseInt(h))) return showPlayer(h);
   if (h == "overview") return showLevels();
   if (h == "top_players") return showTopPlayers();
+  if (h == "top_players_1k") return showTopPlayers1k();
   return showLevel(h);
 }
 
@@ -113,6 +114,10 @@ function activateOverviewButton() {
 
 function activateTopPlayersButton() {
   activateButton("Top Players", "top_players");
+}
+
+function activateTopPlayers1kButton() {
+  activateButton("Top Players (>1k solvers)", "top_players_1k");
 }
 
 function activateLevelButton(level_id) {
@@ -386,13 +391,28 @@ function showLevels() {
 // ---------------------------------------------------------
 function showTopPlayers() {
   activateTopPlayersButton();
+  var heading = "Total combined scores";
+
+  var top_levels = Object.keys(levels)
+    .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)); // Scored
+
+  showTopLevels(heading, top_levels);
+}
+
+function showTopPlayers1k() {
+  activateTopPlayers1kButton();
   var heading = "Total combined scores for levels with >1000 solvers";
-  var headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
-  var rows = [];
 
   var top_levels = Object.keys(levels)
     .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)) // Scored
     .filter(l => Object.keys(levels[l]).length > 1000); // More than 1000 solvers
+
+  showTopLevels(heading, top_levels);
+}
+
+function showTopLevels(heading, top_levels) {
+  var headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
+  var rows = [];
 
   var top_players = Object.keys(levels[top_levels[0]])
     .filter(p => top_levels.every(l => p in levels[l]));
