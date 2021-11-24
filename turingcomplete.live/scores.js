@@ -1,88 +1,6 @@
 const user_ids = {};
 const levels = {};
-const level_names = {
-  ai_showdown: "AI Showdown",
-  alu_1: "Logic Engine",
-  alu_2: "Arithmetic Engine",
-  always_on: "Always On",
-  and_gate: "AND Gate",
-  and_gate_3: "Bigger AND Gate",
-  any_doubles: "Double Trouble",
-  binary_programming: "Add 5",
-  binary_racer: "Binary Racer",
-  binary_search: "Storage Cracker",
-  bit_adder: "Half Adder",
-  bit_inverter: "Bit Inverter",
-  buffer: "One Way",
-  byte_adder: "Adding Bytes",
-  byte_and: "Byte AND",
-  byte_constant: "Byte Constant",
-  byte_equal: "Equality",
-  byte_less: "Unsigned Less",
-  byte_less_i: "Signed Less",
-  byte_mux: "Input Selector",
-  byte_not: "Byte NOT",
-  byte_or: "Byte OR",
-  byte_switch: "Switch",
-  byte_xor: "Byte XOR",
-  call_ret: "Functions",
-  capitalize: "Planet Names",
-  circumference: "Calibrating Laser Cannons",
-  component_factory: "Component Factory",
-  compute_xor: "XOR",
-  computing_codes: "Calculations",
-  conditions: "Conditions",
-  constants: "Immediate Values",
-  counting_signals: "Counting Signals",
-  crude_awakening: "Crude Awakening",
-  dance: "Dancing Machine",
-  decoder: "Instruction Decoder",
-  delay_level: "Delay",
-  demux: "1 bit decoder",
-  demux_3: "3 bit decoder",
-  dependency: "Circular Dependency",
-  divide: "Divide",
-  double_number: "Double the Number",
-  flood_predictor: "Water World",
-  full_adder: "Full Adder",
-  leg_1: "Wire Spaghetti",
-  leg_2: "Opcodes",
-  leg_3: "Immediate Values",
-  leg_4: "Conditionals",
-  maze: "The Maze",
-  mod_4: "Masking Time",
-  multiply: "The Product of Nibbles",
-  nand_gate: "NAND Gate",
-  negative_numbers: "Negative Numbers",
-  nor_gate: "NOR Gate",
-  not_gate: "NOT Gate",
-  odd_number_of_signals: "ODD Number of Signals",
-  or_gate: "OR Gate",
-  or_gate_3: "Bigger OR Gate",
-  program: "Program",
-  push_pop: "PUSH and POP",
-  ram: "RAM",
-  ram_component: "Little Box",
-  registers: "Registers",
-  robot_racing: "Robot Racing",
-  saving_bytes: "Saving Bytes",
-  saving_gracefully: "Saving Gracefully",
-  second_tick: "Second Tick",
-  shift: "Shift",
-  signed_negator: "Signed negator",
-  sorter: "Delicious Order",
-  spacial_invasion: "Spacial Invasion",
-  sr_latch: "Tangled Gates",
-  stack: "Stack",
-  test_lab: "The Lab",
-  tick_tock: "Counter",
-  tower: "Tower of Radioactive Alloy",
-  turing_complete: "Turing Complete",
-  unseen_fruit: "Unseen Fruit",
-  wide_instructions: "Wide Instructions",
-  xnor: "XNOR Gate",
-  xor_gate: "XOR Gate",
-};
+const metadata = {};
 let load_complete = false;
 let charts_initialized = false;
 
@@ -115,6 +33,15 @@ function loadHashPage() {
 }
 
 // ---------------------------------------------------------
+function levelName(level_id) {
+  return metadata[level_id].name || level_id;
+}
+
+function playerName(player_id) {
+  return user_ids[player_id] || player_id;
+}
+
+// ---------------------------------------------------------
 function activateOverviewButton() {
   activateButton("Level Overview", "overview");
 }
@@ -128,13 +55,11 @@ function activateTopPlayers1kButton() {
 }
 
 function activateLevelButton(level_id) {
-  const level_name = level_names[level_id] || level_id;
-  activateButton(level_name, level_id);
+  activateButton(levelName(level_id), level_id);
 }
 
 function activatePlayerButton(player_id) {
-  const player_name = user_ids[player_id] || player_id;
-  activateButton(player_name, player_id);
+  activateButton(playerName(player_id), player_id);
 }
 
 function activateButton(text, hash) {
@@ -239,11 +164,11 @@ function loadBookmarks() {
     const bookmark = bookmarks[b];
     if (document.getElementById("btn_" + bookmark)) continue;
     if (!isNaN(parseInt(bookmark)) && Object.keys(user_ids).includes(bookmark)) {
-      const player_name = user_ids[bookmark] || bookmark;
+      const player_name = playerName(bookmark);
       const button = createButton(player_name, bookmark);
       container.appendChild(button);
     } else if (Object.keys(levels).includes(bookmark)) {
-      const level_name = level_names[bookmark] || bookmark;
+      const level_name = levelName(bookmark);
       const button = createButton(level_name, bookmark);
       container.appendChild(button);
     } else {
@@ -262,9 +187,10 @@ function refreshApiData() {
   document.getElementById("content").replaceChildren(title);
 
   loadApiData()
-    .then(([usernames, scores]) => {
+    .then(([usernames, scores, level_meta]) => {
       handleUsernames(usernames);
       handleScores(scores);
+      handleLevelMeta(level_meta);
       load_complete = true;
       loadBookmarks();
       loadHashPage();
@@ -281,16 +207,19 @@ function refreshApiData() {
 }
 
 async function loadApiData() {
-  const [usernamesResponse, scoresResponse] = await Promise.all([
+  const [usernamesResponse, scoresResponse, metadataResponse] = await Promise.all([
     fetch("https://turingcomplete.game/api_usernames"),
-    fetch("https://turingcomplete.game/api_scores")
+    fetch("https://turingcomplete.game/api_scores"),
+    fetch("https://turingcomplete.game/api_level_meta"),
   ]);
   const usernames = await usernamesResponse.text();
   const scores = await scoresResponse.text();
-  return [usernames, scores];
+  const metadata = await metadataResponse.text();
+  return [usernames, scores, metadata];
 }
 
 function handleUsernames(data) {
+  // Server id to username relationship
   const usernames = data.trim().split(/\n/);
   for (let i = 0; i < usernames.length; i++) {
     const x = usernames[i].split(/,/, 2);
@@ -302,11 +231,12 @@ function handleUsernames(data) {
 }
 
 function handleScores(data) {
+  // Server scores (user_id, level_id, nand, delay, tick)
   const scores = data.trim().split(/\n/);
   for (let i = 0; i < scores.length; i++) {
     const x = scores[i].split(/,/, 5);
     const user_id = x[0];
-    const user_name = user_ids[user_id];
+    const user_name = playerName(user_id);
     const level_id = x[1];
     const nand = parseInt(x[2]);
     const delay = parseInt(x[3]);
@@ -322,6 +252,22 @@ function handleScores(data) {
     };
   }
   console.log("Read " + scores.length + " scores");
+}
+
+function handleLevelMeta(level_meta) {
+  // Meta data for levels (enum_number, enum_id, title, is_architecture, no_score).
+  // The order here is the same as on player profiles.
+  const data = level_meta.trim().split(/\n/);
+  for (let i = 0; i < data.length; i++) {
+    const m = data[i].split(/,/);
+    const level_id = m[1];
+    metadata[level_id] = {
+      sort_key: parseInt(i),
+      name: m[2],
+      arch: m[3] === "true",
+      scored: m[4] === "false",
+    };
+  }
 }
 
 // ---------------------------------------------------------
@@ -349,10 +295,10 @@ function showLevels() {
   const bookmarks = readBookmarks();
   for (level_id in sorted_levels) {
     level_id = sorted_levels[level_id];
-    const level_name = level_names[level_id] || level_id;
+    const level_name = levelName(level_id);
     const solvers = Object.keys(levels[level_id]);
     const sums = solvers.map(x => levels[level_id][x]["sum"]);
-    const scored = sums.some(s => s > 0);
+    const scored = metadata[level_id]["scored"];
     const num_solvers = solvers.length;
     let max, min, average, first;
     if (scored) {
@@ -361,7 +307,7 @@ function showLevels() {
       average = Math.floor(sums.reduce((a, b) => a + b) / sums.length);
       first = solvers.filter((s) => levels[level_id][s]["sum"] <= min);
       if (first.length == 1) {
-        first = user_ids[first[0]];
+        first = playerName(first[0]);
       } else {
         first = first.length;
       }
@@ -425,7 +371,7 @@ function showTopLevels(heading, top_levels) {
   const results = top_players.map(function(player_id) {
     const player = {
       href: "#" + player_id,
-      text: user_ids[player_id],
+      text: playerName(player_id),
     };
     if (bookmarks.includes(player_id)) {
       player["img"] = "bi bi-star";
@@ -483,7 +429,6 @@ function showTopLevels(heading, top_levels) {
     ]);
   }
 
-  data = google.visualization.arrayToDataTable(data);
   const style = getComputedStyle(document.body);
   const textColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-light" : "--bs-dark");
   const bgColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-bg-color-alt" : "--bs-bg-color");
@@ -519,14 +464,15 @@ function showTopLevels(heading, top_levels) {
   };
   buildTable(heading, null, headers, rows, (plotContainer) => {
     const chart = new google.visualization.Histogram(plotContainer);
-    chart.draw(data, options);
+    const dataTable = google.visualization.arrayToDataTable(data);
+    chart.draw(dataTable, options);
   });
 }
 
 // ---------------------------------------------------------
 function showLevel(level_id) {
   activateLevelButton(level_id);
-  const level_name = level_names[level_id] || level_id;
+  const level_name = levelName(level_id);
   const heading = "Leaderboard for " + level_name;
   const bookmark = createBookmark(level_id);
   const headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
@@ -547,23 +493,19 @@ function showLevel(level_id) {
   const data = [
     ["solver", "sum"]
   ];
+  const ticksScored =
+    metadata[level_id]["scored"] &&
+    metadata[level_id]["arch"];
   for (const s in sorted_solvers) {
     if (++solves > 100) break; // Only show 100 results
 
     const solver_id = sorted_solvers[s];
-    const solver_name = user_ids[solver_id];
+    const solver_name = playerName(solver_id);
     const solver = levels[level_id][solver_id];
     const nand = solver["nand"];
     const delay = solver["delay"];
-    let tick = solver["tick"];
+    const tick = ticksScored ? solver["tick"] : "-";
     const sum = solver["sum"];
-
-    const otherTickScores = Object.keys(levels[level_id])
-      .map(x => levels[level_id][x])
-      .some(x => x["tick"] != tick);
-    if (tick == 0 && !otherTickScores) {
-      tick = "-";
-    }
 
     if (s > 0) {
       const solver_id_above = sorted_solvers[s - 1];
@@ -593,7 +535,7 @@ function showLevel(level_id) {
   const sum_limit = Math.min(99999, levels[level_id][p90]["sum"] / 0.90);
   for (const s in sorted_solvers) {
     const solver_id = sorted_solvers[s];
-    const solver_name = user_ids[solver_id];
+    const solver_name = playerName(solver_id);
     const solver = levels[level_id][solver_id];
     const sum = solver["sum"];
     if (sum >= sum_limit) break;
@@ -604,6 +546,8 @@ function showLevel(level_id) {
   }
 
   const style = getComputedStyle(document.body);
+  const textColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-light" : "--bs-dark");
+  const bgColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-bg-color-alt" : "--bs-bg-color");
   const options = {
     width: 1050,
     height: 500,
@@ -620,7 +564,7 @@ function showLevel(level_id) {
       slantedText: true,
       slantedTextAngle: -60,
       textStyle: {
-        color: style.getPropertyValue(darkmode.inDarkMode ? "--bs-light" : "--bs-dark"),
+        color: textColor,
       },
     },
     vAxis: {
@@ -628,7 +572,7 @@ function showLevel(level_id) {
         count: 2
       }
     },
-    backgroundColor: style.getPropertyValue(darkmode.inDarkMode ? "--bs-bg-color-alt" : "--bs-bg-color"),
+    backgroundColor: bgColor,
     histogram: {
       bucketSize: 1,
       maxNumBuckets: Math.min(50, sorted_solvers.length),
@@ -644,7 +588,7 @@ function showLevel(level_id) {
 // ---------------------------------------------------------
 function showPlayer(player_id) {
   activatePlayerButton(player_id);
-  const player_name = user_ids[player_id] || player_id;
+  const player_name = playerName(player_id);
   const heading = "Stats for " + player_name;
   const bookmark = createBookmark(player_id);
   const headers = ["Level", "Place", "# tied", "nand", "delay", "tick", "sum"];
@@ -661,7 +605,7 @@ function showPlayer(player_id) {
   const bookmarks = readBookmarks();
   for (const l in sorted_levels) {
     const level_id = sorted_levels[l];
-    const level_name = level_names[level_id] || level_id;
+    const level_name = levelName(level_id);
     let place = "-",
       ties = "-",
       nand = "-",
@@ -671,19 +615,19 @@ function showPlayer(player_id) {
     const solved = (player_id in levels[level_id]);
     const solves = Object.keys(levels[level_id])
       .map(x => levels[level_id][x]);
-    const scored = solves
-      .some(x => x["sum"] > 0);
+    const ticksScored =
+      metadata[level_id]["scored"] &&
+      metadata[level_id]["arch"];
+    const scored =
+      metadata[level_id]["scored"];
     if (solved && scored) {
       const player_score = levels[level_id][player_id];
       nand = player_score["nand"];
       delay = player_score["delay"];
-      tick = player_score["tick"];
-      sum = player_score["sum"];
-      const otherTickScores = solves
-        .some(x => x["tick"] != tick);
-      if (tick == 0 && otherTickScores == 0) {
-        tick = "-";
+      if (ticksScored) {
+        tick = player_score["tick"];
       }
+      sum = player_score["sum"];
       ties = solves
         .filter(x => x["sum"] == sum)
         .length;
@@ -716,16 +660,16 @@ function showPlayer(player_id) {
 }
 
 // ---------------------------------------------------------
-function buildTable(heading, bookmark, headers, rows, chart) {
+function buildTable(heading, bookmark, headers, rows, extra) {
   const title = document.createElement("h2");
   const titleText = document.createTextNode(heading);
   title.appendChild(titleText);
   if (bookmark) title.appendChild(bookmark);
 
-  let plotContainer = null;
-  if (chart && charts_initialized) {
-    plotContainer = document.createElement("div");
-    chart(plotContainer);
+  let extraContainer = null;
+  if (extra) {
+    extraContainer = document.createElement("div");
+    extra(extraContainer);
   }
 
   const tbl = document.createElement("table");
@@ -779,8 +723,8 @@ function buildTable(heading, bookmark, headers, rows, chart) {
   }
 
   tbl.appendChild(tblBody);
-  if (plotContainer) {
-    document.getElementById("content").replaceChildren(title, plotContainer, tbl);
+  if (extraContainer) {
+    document.getElementById("content").replaceChildren(title, extraContainer, tbl);
   } else {
     document.getElementById("content").replaceChildren(title, tbl);
   }
