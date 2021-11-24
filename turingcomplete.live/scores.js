@@ -151,7 +151,7 @@ function activateButton(text, hash) {
 
   if (button == null) {
     // Create a new button
-    const button = createButton(text, hash);
+    button = createButton(text, hash);
     container.appendChild(button);
   }
   button.className = "btn btn-primary";
@@ -555,8 +555,15 @@ function showLevel(level_id) {
     const solver = levels[level_id][solver_id];
     const nand = solver["nand"];
     const delay = solver["delay"];
-    const tick = solver["tick"];
+    let tick = solver["tick"];
     const sum = solver["sum"];
+
+    const otherTickScores = Object.keys(levels[level_id])
+      .map(x => levels[level_id][x])
+      .some(x => x["tick"] != tick);
+    if (tick == 0 && !otherTickScores) {
+      tick = "-";
+    }
 
     if (s > 0) {
       const solver_id_above = sorted_solvers[s - 1];
@@ -673,8 +680,7 @@ function showPlayer(player_id) {
       tick = player_score["tick"];
       sum = player_score["sum"];
       const otherTickScores = solves
-        .filter(x => x["tick"] != tick)
-        .length
+        .some(x => x["tick"] != tick);
       if (tick == 0 && otherTickScores == 0) {
         tick = "-";
       }
