@@ -84,9 +84,16 @@ const level_names = {
   xor_gate: "XOR Gate",
 };
 let load_complete = false;
+let charts_initialized = false;
 
 window.addEventListener("hashchange", loadHashPage);
 window.onload = refreshApiData;
+google.charts.load("current", {
+  packages: ["corechart"]
+});
+google.charts.setOnLoadCallback(function() {
+  charts_initialized = true;
+});
 
 // ---------------------------------------------------------
 function loadHashPage() {
@@ -441,6 +448,9 @@ function showTopLevels(heading, top_levels) {
 
   let num_results = 0;
   let place = 1;
+  let data = [
+    ["player", "sum"]
+  ];
   for (const r in results) {
     if (++num_results > 100) break; // Only show 100 results
 
@@ -464,8 +474,53 @@ function showTopLevels(heading, top_levels) {
       result["sum"],
     ]);
   }
+  for (const r in results) {
+    const result = results[r];
+    if (result["sum"] > 30000) break;
+    data.push([
+      result["player"]["text"],
+      result["sum"],
+    ]);
+  }
 
-  buildTable(heading, null, headers, rows);
+  data = google.visualization.arrayToDataTable(data);
+  const style = getComputedStyle(document.body);
+  const textColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-light" : "--bs-dark");
+  const bgColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-bg-color-alt" : "--bs-bg-color");
+  const options = {
+    width: 1050,
+    height: 500,
+    chartArea: {
+      left: 20,
+      top: 0,
+      width: "95%",
+      height: "85%",
+    },
+    legend: {
+      position: "none",
+    },
+    hAxis: {
+      slantedText: true,
+      slantedTextAngle: -60,
+      textStyle: {
+        color: textColor,
+      },
+    },
+    vAxis: {
+      gridlines: {
+        count: 2,
+      }
+    },
+    backgroundColor: bgColor,
+    histogram: {
+      bucketSize: 1,
+      maxNumBuckets: Math.min(50, results.length),
+    },
+  };
+  buildTable(heading, null, headers, rows, (plotContainer) => {
+    const chart = new google.visualization.Histogram(plotContainer);
+    chart.draw(data, options);
+  });
 }
 
 // ---------------------------------------------------------
@@ -489,6 +544,9 @@ function showLevel(level_id) {
   let solves = 0;
   let place = 1;
   const bookmarks = readBookmarks();
+  const data = [
+    ["solver", "sum"]
+  ];
   for (const s in sorted_solvers) {
     if (++solves > 100) break; // Only show 100 results
 
@@ -524,8 +582,56 @@ function showLevel(level_id) {
       sum
     ]);
   }
+  const p90 = sorted_solvers[Math.floor(sorted_solvers.length * 0.90)];
+  const sum_limit = Math.min(99999, levels[level_id][p90]["sum"] / 0.90);
+  for (const s in sorted_solvers) {
+    const solver_id = sorted_solvers[s];
+    const solver_name = user_ids[solver_id];
+    const solver = levels[level_id][solver_id];
+    const sum = solver["sum"];
+    if (sum >= sum_limit) break;
+    data.push([
+      solver_name,
+      sum
+    ]);
+  }
 
-  buildTable(heading, bookmark, headers, rows);
+  const style = getComputedStyle(document.body);
+  const options = {
+    width: 1050,
+    height: 500,
+    chartArea: {
+      left: 20,
+      top: 0,
+      width: "95%",
+      height: "85%",
+    },
+    legend: {
+      position: "none"
+    },
+    hAxis: {
+      slantedText: true,
+      slantedTextAngle: -60,
+      textStyle: {
+        color: style.getPropertyValue(darkmode.inDarkMode ? "--bs-light" : "--bs-dark"),
+      },
+    },
+    vAxis: {
+      gridlines: {
+        count: 2
+      }
+    },
+    backgroundColor: style.getPropertyValue(darkmode.inDarkMode ? "--bs-bg-color-alt" : "--bs-bg-color"),
+    histogram: {
+      bucketSize: 1,
+      maxNumBuckets: Math.min(50, sorted_solvers.length),
+    },
+  };
+  buildTable(heading, bookmark, headers, rows, (plotContainer) => {
+    const chart = new google.visualization.Histogram(plotContainer);
+    const dataTable = google.visualization.arrayToDataTable(data);
+    chart.draw(dataTable, options);
+  });
 }
 
 // ---------------------------------------------------------
@@ -604,11 +710,17 @@ function showPlayer(player_id) {
 }
 
 // ---------------------------------------------------------
-function buildTable(heading, bookmark, headers, rows) {
+function buildTable(heading, bookmark, headers, rows, chart) {
   const title = document.createElement("h2");
   const titleText = document.createTextNode(heading);
   title.appendChild(titleText);
   if (bookmark) title.appendChild(bookmark);
+
+  let plotContainer = null;
+  if (chart && charts_initialized) {
+    plotContainer = document.createElement("div");
+    chart(plotContainer);
+  }
 
   const tbl = document.createElement("table");
   tbl.className = "table table-striped w-auto";
@@ -661,6 +773,10 @@ function buildTable(heading, bookmark, headers, rows) {
   }
 
   tbl.appendChild(tblBody);
-  document.getElementById("content").replaceChildren(title, tbl);
+  if (plotContainer) {
+    document.getElementById("content").replaceChildren(title, plotContainer, tbl);
+  } else {
+    document.getElementById("content").replaceChildren(title, tbl);
+  }
   tbl.setAttribute("border", "2");
 }
