@@ -91,8 +91,8 @@ window.onload = refreshApiData;
 // ---------------------------------------------------------
 function loadHashPage() {
   if (!load_complete) return;
-  var h = window.location.hash || "#overview";
-  var page_path = h.replace(/^#/, "/");
+  let h = window.location.hash || "#overview";
+  const page_path = h.replace(/^#/, "/");
   gtag("set", "page_path", page_path);
   gtag("event", "page_view", {
     "page_path": page_path
@@ -121,20 +121,20 @@ function activateTopPlayers1kButton() {
 }
 
 function activateLevelButton(level_id) {
-  var level_name = level_names[level_id] || level_id;
+  const level_name = level_names[level_id] || level_id;
   activateButton(level_name, level_id);
 }
 
 function activatePlayerButton(player_id) {
-  var player_name = user_ids[player_id] || player_id;
+  const player_name = user_ids[player_id] || player_id;
   activateButton(player_name, player_id);
 }
 
 function activateButton(text, hash) {
-  var container = document.getElementById("button-container");
-  var button = null;
-  for (var c in container.children) {
-    var e = container.children[c];
+  const container = document.getElementById("button-container");
+  let button = null;
+  for (const c in container.children) {
+    const e = container.children[c];
     if (e.textContent == text) {
       button = e;
     } else {
@@ -144,36 +144,36 @@ function activateButton(text, hash) {
 
   if (button == null) {
     // Create a new button
-    var button = createButton(text, hash);
+    const button = createButton(text, hash);
     container.appendChild(button);
   }
   button.className = "btn btn-primary";
 }
 
 function createButton(text, hash) {
-  var button = document.createElement("button");
+  const button = document.createElement("button");
   button.setAttribute("id", "btn_" + hash);
   button.className = "btn btn-outline-primary";
   button.setAttribute("onclick", "window.location.hash='" + hash + "'");
-  var buttonText = document.createTextNode(text);
+  const buttonText = document.createTextNode(text);
   button.appendChild(buttonText);
   return button;
 }
 
 // ---------------------------------------------------------
 function readBookmarks() {
-  var bookmarks = localStorage.getItem("bookmarks") || "flood_predictor;6;5729";
+  let bookmarks = localStorage.getItem("bookmarks") || "flood_predictor;6;5729";
   bookmarks = bookmarks?.split(/;/) || [];
   return bookmarks.filter(e => e);
 }
 
 function createBookmark(bookmark) {
-  var i = document.createElement("i");
+  const i = document.createElement("i");
   i.setAttribute("id", "bookmark_" + bookmark);
   i.setAttribute("role", "img");
   i.setAttribute("aria-label", "Bookmark");
   i.setAttribute("onclick", "toggleBookmark('" + bookmark + "');");
-  var bookmarks = readBookmarks();
+  const bookmarks = readBookmarks();
   if (bookmarks.includes(bookmark)) {
     i.className = "bi bi-bookmark-star";
   } else {
@@ -202,8 +202,8 @@ function bookmarkSort(x, y) {
 }
 
 function toggleBookmark(bookmark) {
-  var i = document.getElementById("bookmark_" + bookmark);
-  var bookmarks = readBookmarks();
+  const i = document.getElementById("bookmark_" + bookmark);
+  let bookmarks = readBookmarks();
   if (bookmarks.includes(bookmark)) {
     bookmarks = bookmarks.filter(b => b != bookmark);
     i.className = "bi bi-bookmark";
@@ -226,18 +226,18 @@ function toggleBookmark(bookmark) {
 }
 
 function loadBookmarks() {
-  var bookmarks = readBookmarks();
-  var container = document.getElementById("button-container");
+  const bookmarks = readBookmarks();
+  const container = document.getElementById("button-container");
   for (b in bookmarks) {
-    var bookmark = bookmarks[b];
+    const bookmark = bookmarks[b];
     if (document.getElementById("btn_" + bookmark)) continue;
     if (!isNaN(parseInt(bookmark)) && Object.keys(user_ids).includes(bookmark)) {
-      var player_name = user_ids[bookmark] || bookmark;
-      var button = createButton(player_name, bookmark);
+      const player_name = user_ids[bookmark] || bookmark;
+      const button = createButton(player_name, bookmark);
       container.appendChild(button);
     } else if (Object.keys(levels).includes(bookmark)) {
-      var level_name = level_names[bookmark] || bookmark;
-      var button = createButton(level_name, bookmark);
+      const level_name = level_names[bookmark] || bookmark;
+      const button = createButton(level_name, bookmark);
       container.appendChild(button);
     } else {
       // console.log("Ignoring unrecognized bookmark: " + bookmark);
@@ -249,8 +249,8 @@ function loadBookmarks() {
 function refreshApiData() {
   gtag("event", load_complete ? "refresh" : "load");
   load_complete = false;
-  var title = document.createElement("h2");
-  var titleText = document.createTextNode("Downloading stats...");
+  const title = document.createElement("h2");
+  const titleText = document.createTextNode("Downloading stats...");
   title.appendChild(titleText);
   document.getElementById("content").replaceChildren(title);
 
@@ -263,10 +263,13 @@ function refreshApiData() {
       loadHashPage();
     })
     .catch((error) => {
-      var title = document.createElement("h2");
-      var titleText = document.createTextNode("Failed to load: " + error);
+      const title = document.createElement("h2");
+      const titleText = document.createTextNode("Failed to load: " + error);
       title.appendChild(titleText);
-      document.getElementById("content").replaceChildren(title);
+      const pre = document.createElement("pre");
+      const preText = document.createTextNode(error.stack);
+      pre.appendChild(preText);
+      document.getElementById("content").replaceChildren(title, pre);
     });
 }
 
@@ -281,26 +284,26 @@ async function loadApiData() {
 }
 
 function handleUsernames(data) {
-  var usernames = data.trim().split(/\n/);
-  for (var i = 0; i < usernames.length; i++) {
-    var x = usernames[i].split(/,/, 2);
-    var id = x[0];
-    var name = x[1];
+  const usernames = data.trim().split(/\n/);
+  for (let i = 0; i < usernames.length; i++) {
+    const x = usernames[i].split(/,/, 2);
+    const id = x[0];
+    const name = x[1];
     user_ids[id] = name;
   }
   console.log("Read " + usernames.length + " usernames");
 }
 
 function handleScores(data) {
-  var scores = data.trim().split(/\n/);
-  for (var i = 0; i < scores.length; i++) {
-    var x = scores[i].split(/,/, 5);
-    var user_id = x[0];
-    var user_name = user_ids[user_id];
-    var level_id = x[1];
-    var nand = parseInt(x[2]);
-    var delay = parseInt(x[3]);
-    var tick = parseInt(x[4]);
+  const scores = data.trim().split(/\n/);
+  for (let i = 0; i < scores.length; i++) {
+    const x = scores[i].split(/,/, 5);
+    const user_id = x[0];
+    const user_name = user_ids[user_id];
+    const level_id = x[1];
+    const nand = parseInt(x[2]);
+    const delay = parseInt(x[3]);
+    const tick = parseInt(x[4]);
     if (!(level_id in levels)) {
       levels[level_id] = {};
     }
@@ -317,8 +320,8 @@ function handleScores(data) {
 // ---------------------------------------------------------
 function showLevels() {
   activateOverviewButton();
-  var heading = "Level Overview";
-  var headers = [
+  const heading = "Level Overview";
+  const headers = [
     "Level",
     "Solvers",
     "First",
@@ -326,49 +329,43 @@ function showLevels() {
     "Average",
     "Worst"
   ];
-  var rows = [];
+  const rows = [];
 
   // Sort levels by number of solvers
-  var sorted_levels = Object.keys(levels).sort(function(x, y) {
-    var sx = Object.keys(levels[x]).length;
-    var sy = Object.keys(levels[y]).length;
+  const sorted_levels = Object.keys(levels).sort(function(x, y) {
+    const sx = Object.keys(levels[x]).length;
+    const sy = Object.keys(levels[y]).length;
     if (sx < sy) return 1;
     if (sx > sy) return -1;
     return 0;
   });
-  var bookmarks = readBookmarks();
+  const bookmarks = readBookmarks();
   for (level_id in sorted_levels) {
     level_id = sorted_levels[level_id];
-    var level_name = level_names[level_id] || level_id;
-    var solvers = Object.keys(levels[level_id]);
-    var scored = solvers
-      .map(x => levels[level_id][x]["sum"])
-      .some(s => s > 0);
-    var num_solvers = solvers.length;
-
-    var sums = solvers.map((s) => levels[level_id][s]["sum"]);
-    sums = sums.filter((s) => parseInt(s) < 99999);
-    var max, min, average, first;
-    if (sums.length > 0) {
+    const level_name = level_names[level_id] || level_id;
+    const solvers = Object.keys(levels[level_id]);
+    const sums = solvers.map(x => levels[level_id][x]["sum"]);
+    const scored = sums.some(s => s > 0);
+    const num_solvers = solvers.length;
+    let max, min, average, first;
+    if (scored) {
       max = Math.max(...sums);
       min = Math.min(...sums);
-      if (min == 0 && max == 0) {
-        min = "-";
-        max = "-";
-        average = "-";
-        first = "-";
+      average = Math.floor(sums.reduce((a, b) => a + b) / sums.length);
+      first = solvers.filter((s) => levels[level_id][s]["sum"] <= min);
+      if (first.length == 1) {
+        first = user_ids[first[0]];
       } else {
-        average = Math.floor(sums.reduce((a, b) => a + b) / sums.length);
-        first = solvers.filter((s) => levels[level_id][s]["sum"] <= min);
-        if (first.length == 1) {
-          first = user_ids[first[0]];
-        } else {
-          first = first.length;
-        }
+        first = first.length;
       }
+    } else {
+      min = "-";
+      max = "-";
+      average = "-";
+      first = "-";
     }
 
-    var level = {
+    const level = {
       href: "#" + level_id,
       text: level_name,
     };
@@ -391,9 +388,9 @@ function showLevels() {
 // ---------------------------------------------------------
 function showTopPlayers() {
   activateTopPlayersButton();
-  var heading = "Total combined scores";
+  const heading = "Total combined scores";
 
-  var top_levels = Object.keys(levels)
+  const top_levels = Object.keys(levels)
     .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)); // Scored
 
   showTopLevels(heading, top_levels);
@@ -401,9 +398,9 @@ function showTopPlayers() {
 
 function showTopPlayers1k() {
   activateTopPlayers1kButton();
-  var heading = "Total combined scores for levels with >1000 solvers";
+  const heading = "Total combined scores for levels with >1000 solvers";
 
-  var top_levels = Object.keys(levels)
+  const top_levels = Object.keys(levels)
     .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)) // Scored
     .filter(l => Object.keys(levels[l]).length > 1000); // More than 1000 solvers
 
@@ -411,22 +408,22 @@ function showTopPlayers1k() {
 }
 
 function showTopLevels(heading, top_levels) {
-  var headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
-  var rows = [];
+  const headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
+  const rows = [];
 
-  var top_players = Object.keys(levels[top_levels[0]])
+  const top_players = Object.keys(levels[top_levels[0]])
     .filter(p => top_levels.every(l => p in levels[l]));
 
-  var bookmarks = readBookmarks();
-  var results = top_players.map(function(player_id) {
-    var player = {
+  const bookmarks = readBookmarks();
+  const results = top_players.map(function(player_id) {
+    const player = {
       href: "#" + player_id,
       text: user_ids[player_id],
     };
     if (bookmarks.includes(player_id)) {
       player["img"] = "bi bi-star";
     }
-    var s = top_levels.map(l => levels[l][player_id]);
+    const s = top_levels.map(l => levels[l][player_id]);
     return {
       player: player,
       nand: s.map(a => a.nand).reduce((a, b) => a + b),
@@ -435,24 +432,24 @@ function showTopLevels(heading, top_levels) {
       sum: s.map(a => a.sum).reduce((a, b) => a + b),
     };
   }).sort(function(x, y) {
-    var sx = x.sum;
-    var sy = y.sum;
+    const sx = x.sum;
+    const sy = y.sum;
     if (sx < sy) return -1;
     if (sx > sy) return 1;
     return 0;
   });
 
-  var num_results = 0;
-  var place = 1;
-  for (var r in results) {
+  let num_results = 0;
+  let place = 1;
+  for (const r in results) {
     if (++num_results > 100) break; // Only show 100 results
 
-    var result = results[r];
+    const result = results[r];
 
     if (r > 0) {
-      var result_above = results[r - 1];
-      var sum = result["sum"];
-      var sum_above = result_above["sum"];
+      const result_above = results[r - 1];
+      const sum = result["sum"];
+      const sum_above = result_above["sum"];
       if (sum != sum_above) {
         place = num_results;
       }
@@ -474,44 +471,44 @@ function showTopLevels(heading, top_levels) {
 // ---------------------------------------------------------
 function showLevel(level_id) {
   activateLevelButton(level_id);
-  var level_name = level_names[level_id] || level_id;
-  var heading = "Leaderboard for " + level_name;
-  var bookmark = createBookmark(level_id);
-  var headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
-  var rows = [];
+  const level_name = level_names[level_id] || level_id;
+  const heading = "Leaderboard for " + level_name;
+  const bookmark = createBookmark(level_id);
+  const headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
+  const rows = [];
 
   // Sort solvers by lowest sum
-  var sorted_solvers = Object.keys(levels[level_id]).sort(function(x, y) {
-    var xs = levels[level_id][x]["sum"];
-    var ys = levels[level_id][y]["sum"];
+  const sorted_solvers = Object.keys(levels[level_id]).sort(function(x, y) {
+    const xs = levels[level_id][x]["sum"];
+    const ys = levels[level_id][y]["sum"];
     if (xs < ys) return -1;
     if (xs > ys) return 1;
     return 0;
   });
 
-  var solves = 0;
-  var place = 1;
-  var bookmarks = readBookmarks();
-  for (var s in sorted_solvers) {
+  let solves = 0;
+  let place = 1;
+  const bookmarks = readBookmarks();
+  for (const s in sorted_solvers) {
     if (++solves > 100) break; // Only show 100 results
 
-    var solver_id = sorted_solvers[s];
-    var solver_name = user_ids[solver_id];
-    var solver = levels[level_id][solver_id];
-    var nand = solver["nand"];
-    var delay = solver["delay"];
-    var tick = solver["tick"];
-    var sum = solver["sum"];
+    const solver_id = sorted_solvers[s];
+    const solver_name = user_ids[solver_id];
+    const solver = levels[level_id][solver_id];
+    const nand = solver["nand"];
+    const delay = solver["delay"];
+    const tick = solver["tick"];
+    const sum = solver["sum"];
 
     if (s > 0) {
-      var solver_id_above = sorted_solvers[s - 1];
-      var solver_above = levels[level_id][solver_id_above];
-      var sum_above = solver_above["sum"];
+      const solver_id_above = sorted_solvers[s - 1];
+      const solver_above = levels[level_id][solver_id_above];
+      const sum_above = solver_above["sum"];
       if (sum != sum_above) {
         place = solves;
       }
     }
-    var player = {
+    const player = {
       href: "#" + solver_id,
       text: solver_name,
     };
@@ -534,27 +531,27 @@ function showLevel(level_id) {
 // ---------------------------------------------------------
 function showPlayer(player_id) {
   activatePlayerButton(player_id);
-  var player_name = user_ids[player_id] || player_id;
-  var heading = "Stats for " + player_name;
-  var bookmark = createBookmark(player_id);
-  var headers = ["Level", "Place", "# tied", "nand", "delay", "tick", "sum"];
-  var rows = [];
+  const player_name = user_ids[player_id] || player_id;
+  const heading = "Stats for " + player_name;
+  const bookmark = createBookmark(player_id);
+  const headers = ["Level", "Place", "# tied", "nand", "delay", "tick", "sum"];
+  const rows = [];
 
   // Sort levels by number of solvers
-  var sorted_levels = Object.keys(levels).sort(function(x, y) {
-    var sx = Object.keys(levels[x]).length;
-    var sy = Object.keys(levels[y]).length;
+  const sorted_levels = Object.keys(levels).sort(function(x, y) {
+    const sx = Object.keys(levels[x]).length;
+    const sy = Object.keys(levels[y]).length;
     if (sx < sy) return 1;
     if (sx > sy) return -1;
     return 0;
   });
-  var bookmarks = readBookmarks();
-  for (var l in sorted_levels) {
-    var level_id = sorted_levels[l];
-    var level_name = level_names[level_id] || level_id;
-    var place = "-",
-      ties = "-";
-    var nand = "-",
+  const bookmarks = readBookmarks();
+  for (const l in sorted_levels) {
+    const level_id = sorted_levels[l];
+    const level_name = level_names[level_id] || level_id;
+    let place = "-",
+      ties = "-",
+      nand = "-",
       delay = "-",
       tick = "-",
       sum = "-";
@@ -564,12 +561,12 @@ function showPlayer(player_id) {
     const scored = solves
       .some(x => x["sum"] > 0);
     if (solved && scored) {
-      var player_score = levels[level_id][player_id];
+      const player_score = levels[level_id][player_id];
       nand = player_score["nand"];
       delay = player_score["delay"];
       tick = player_score["tick"];
       sum = player_score["sum"];
-      var otherTickScores = solves
+      const otherTickScores = solves
         .filter(x => x["tick"] != tick)
         .length
       if (tick == 0 && otherTickScores == 0) {
@@ -585,7 +582,7 @@ function showPlayer(player_id) {
     } else if (solved) {
       place = "unscored";
     }
-    var level = {
+    const level = {
       href: "#" + level_id,
       text: level_name,
     };
@@ -608,21 +605,21 @@ function showPlayer(player_id) {
 
 // ---------------------------------------------------------
 function buildTable(heading, bookmark, headers, rows) {
-  var title = document.createElement("h2");
-  var titleText = document.createTextNode(heading);
+  const title = document.createElement("h2");
+  const titleText = document.createTextNode(heading);
   title.appendChild(titleText);
   if (bookmark) title.appendChild(bookmark);
 
-  var tbl = document.createElement("table");
+  const tbl = document.createElement("table");
   tbl.className = "table table-striped w-auto";
-  var tblBody = document.createElement("tbody");
-  var tblHead = document.createElement("thead");
+  const tblBody = document.createElement("tbody");
+  const tblHead = document.createElement("thead");
   tblHead.className = "sticky-top";
 
-  var row = document.createElement("tr");
+  const row = document.createElement("tr");
 
-  for (var h in headers) {
-    var header = document.createElement("th");
+  for (const h in headers) {
+    const header = document.createElement("th");
     header.appendChild(document.createTextNode(headers[h]));
     row.appendChild(header);
   }
@@ -630,20 +627,20 @@ function buildTable(heading, bookmark, headers, rows) {
   tblHead.appendChild(row);
   tbl.appendChild(tblHead);
 
-  for (var r in rows) {
-    var rows_r = rows[r];
-    var row = document.createElement("tr");
+  for (const r in rows) {
+    const rows_r = rows[r];
+    const row = document.createElement("tr");
 
-    for (var c in rows_r) {
-      var rows_rc = rows_r[c];
-      var cell = document.createElement("td");
+    for (const c in rows_r) {
+      const rows_rc = rows_r[c];
+      const cell = document.createElement("td");
       if (["string", "number"].includes(typeof rows_rc)) {
-        var cellText = document.createTextNode(rows_rc);
+        const cellText = document.createTextNode(rows_rc);
         cell.appendChild(cellText);
       } else {
-        var cellText = document.createTextNode(rows_rc["text"]);
+        const cellText = document.createTextNode(rows_rc["text"]);
         if ("href" in rows_rc) {
-          var a = document.createElement("a");
+          const a = document.createElement("a");
           a.href = rows_rc["href"];
           a.appendChild(cellText);
           cell.appendChild(a);
@@ -652,7 +649,7 @@ function buildTable(heading, bookmark, headers, rows) {
         }
         cell.appendChild(document.createTextNode(" "));
         if ("img" in rows_rc) {
-          var i = document.createElement("i");
+          const i = document.createElement("i");
           i.className = rows_rc["img"];
           cell.appendChild(i);
         }
