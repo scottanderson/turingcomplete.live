@@ -420,9 +420,12 @@ function showTopLevels(heading, top_levels) {
       result["sum"],
     ]);
   }
+
+  const p90 = results[Math.floor(results.length * 0.90)];
+  const sum_limit = p90.sum / 0.90;
   for (const r in results) {
     const result = results[r];
-    if (result["sum"] > 30000) break;
+    if (result.sum >= sum_limit) break;
     data.push([
       result["player"]["text"],
       result["sum"],
