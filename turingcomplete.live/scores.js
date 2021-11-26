@@ -472,7 +472,7 @@ function showTopLevels(heading, top_levels) {
   const textColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-light" : "--bs-dark");
   const bgColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-bg-color-alt" : "--bs-bg-color");
   const options = {
-    width: 1050,
+    width: Math.min(1050, window.innerWidth * 0.90),
     height: 500,
     chartArea: {
       left: 20,
@@ -588,7 +588,7 @@ function showLevel(level_id) {
   const textColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-light" : "--bs-dark");
   const bgColor = style.getPropertyValue(darkmode.inDarkMode ? "--bs-bg-color-alt" : "--bs-bg-color");
   const options = {
-    width: 1050,
+    width: Math.min(1050, window.innerWidth * 0.90),
     height: 500,
     chartArea: {
       left: 20,
@@ -695,7 +695,14 @@ function showPlayer(player_id) {
     ]);
   }
 
-  buildTable(heading, bookmark, headers, rows);
+  buildTable(heading, bookmark, headers, rows, (container) => {
+    const link = document.createElement("a");
+    link.href = "https://turingcomplete.game/profile/" + player_id;
+    const player_name = playerName(player_id);
+    const linkText = document.createTextNode(player_name + "'s Profile [turingcomplete.game]");
+    link.appendChild(linkText);
+    container.appendChild(link);
+  });
 }
 
 // ---------------------------------------------------------
