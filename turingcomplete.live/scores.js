@@ -2,6 +2,7 @@ const user_ids = {};
 const levels = {};
 const metadata = {};
 let load_complete = false;
+let viewing_cached_data = false;
 let charts_initialized = false;
 
 window.addEventListener("hashchange", loadHashPage);
@@ -69,7 +70,7 @@ function activateButton(text, hash) {
     const e = container.children[c];
     if (e.textContent == text) {
       button = e;
-    } else {
+    } else if (e.id != "btn_refresh") {
       e.className = "btn btn-outline-primary";
     }
   }
@@ -180,14 +181,31 @@ function loadBookmarks() {
 // ---------------------------------------------------------
 function refreshApiData() {
   gtag("event", load_complete ? "refresh" : "load");
+  const reload = load_complete;
   load_complete = false;
+  viewing_cached_data = false;
+
+  const refresh = document.getElementById("btn_refresh");
+  refresh.className = "btn btn-outline-primary";
+
   const title = document.createElement("h2");
-  const titleText = document.createTextNode("Downloading stats...");
+  const titleText = document.createTextNode("Downloading scores...");
   title.appendChild(titleText);
   document.getElementById("content").replaceChildren(title);
 
-  loadApiData()
+  loadApiData(reload)
     .then(([usernames, scores, level_meta]) => {
+      if (!viewing_cached_data) {
+        localStorage.setItem("updated", Date.now());
+      }
+      const updated = localStorage.getItem("updated") || 0;
+      const elapsed = Date.now() - updated;
+      const staleCacheMs = 1000 * 60 * 60; // 1 hour
+      const delay = Math.max(0, staleCacheMs - elapsed);
+      setTimeout(() => {
+        // console.log("Cache data is stale");
+        refresh.className = "btn btn-outline-warning";
+      }, delay);
       handleUsernames(usernames);
       handleScores(scores);
       handleLevelMeta(level_meta);
@@ -196,6 +214,7 @@ function refreshApiData() {
       loadHashPage();
     })
     .catch((error) => {
+      refresh.className = "btn btn-outline-danger";
       const title = document.createElement("h2");
       const titleText = document.createTextNode("Failed to load: " + error);
       title.appendChild(titleText);
@@ -206,7 +225,9 @@ function refreshApiData() {
     });
 }
 
-async function loadApiData() {
+// ---------------------------------------------------------
+async function loadApiData(reload) {
+  const fetch = reload ? window.fetch : fetchWithCache;
   const [usernamesResponse, scoresResponse, metadataResponse] = await Promise.all([
     fetch("https://turingcomplete.game/api_usernames"),
     fetch("https://turingcomplete.game/api_scores"),
@@ -218,6 +239,21 @@ async function loadApiData() {
   return [usernames, scores, metadata];
 }
 
+// ---------------------------------------------------------
+async function fetchWithCache(url) {
+  const cache = await caches.open("scores");
+  const cachedResponse = await cache.match(url);
+  if (cachedResponse && cachedResponse.ok) {
+    // console.log("Retrieved cached data");
+    viewing_cached_data = true;
+    return cachedResponse;
+  }
+  // console.log("Fetching fresh data");
+  await cache.add(url);
+  return await cache.match(url);
+}
+
+// ---------------------------------------------------------
 function handleUsernames(data) {
   // Server id to username relationship
   const usernames = data.trim().split(/\n/);
