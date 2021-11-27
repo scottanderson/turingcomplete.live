@@ -227,7 +227,7 @@ function refreshApiData() {
 
 // ---------------------------------------------------------
 async function loadApiData(reload) {
-  const fetch = reload ? window.fetch : fetchWithCache;
+  const fetch = reload ? fetchWithCache : cacheWithFetch;
   const [usernamesResponse, scoresResponse, metadataResponse] = await Promise.all([
     fetch("https://turingcomplete.game/api_usernames"),
     fetch("https://turingcomplete.game/api_scores"),
@@ -241,6 +241,15 @@ async function loadApiData(reload) {
 
 // ---------------------------------------------------------
 async function fetchWithCache(url) {
+  const cache = await caches.open("scores");
+  const response = await fetch(url);
+  if (response && response.ok) {
+    cache.put(url, response);
+  }
+  return await cache.match(url);
+}
+
+async function cacheWithFetch(url) {
   const cache = await caches.open("scores");
   const cachedResponse = await cache.match(url);
   if (cachedResponse && cachedResponse.ok) {
@@ -307,6 +316,13 @@ function handleLevelMeta(level_meta) {
 }
 
 // ---------------------------------------------------------
+function calculateMedian(list) {
+  const sorted_list = list.sort((a, b) => a - b);
+  const middle = (list.length - 1) / 2;
+  return (list[Math.floor(middle)] + list[Math.ceil(middle)]) / 2
+}
+
+// ---------------------------------------------------------
 function showLevels() {
   activateOverviewButton();
   const heading = "Level Overview";
@@ -315,8 +331,7 @@ function showLevels() {
     "Solvers",
     "First",
     "Best",
-    "Average",
-    "Worst"
+    "Median",
   ];
   const rows = [];
 
@@ -336,11 +351,10 @@ function showLevels() {
     const sums = solvers.map(x => levels[level_id][x]["sum"]);
     const scored = metadata[level_id]["scored"];
     const num_solvers = solvers.length;
-    let max, min, average, first;
+    let min, median, first;
     if (scored) {
-      max = Math.max(...sums);
       min = Math.min(...sums);
-      average = Math.floor(sums.reduce((a, b) => a + b) / sums.length);
+      median = calculateMedian(sums);
       first = solvers.filter((s) => levels[level_id][s]["sum"] <= min);
       if (first.length == 1) {
         first = playerName(first[0]);
@@ -349,8 +363,7 @@ function showLevels() {
       }
     } else {
       min = "-";
-      max = "-";
-      average = "-";
+      median = "-";
       first = "-";
     }
 
@@ -366,8 +379,7 @@ function showLevels() {
       num_solvers,
       first,
       min,
-      average,
-      max
+      median,
     ]);
   }
 
@@ -455,6 +467,58 @@ function showTopLevels(heading, top_levels) {
       result["tick"],
       result["sum"],
     ]);
+  }
+
+  if (num_results < 100) {
+    // Honorable mention for players who have not completed of the levels
+    let sum_above = 0;
+    for (let i = 1; i < top_levels.length; i++) {
+      place = num_results + 1;
+      const honorable_players = Object.keys(levels.crude_awakening)
+        .filter(p => top_levels.filter(l => p in levels[l]).length == (top_levels.length - i))
+        .map(function(player_id) {
+          const player = {
+            href: "#" + player_id,
+            text: playerName(player_id),
+          };
+          if (bookmarks.includes(player_id)) {
+            player["img"] = "bi bi-star";
+          }
+          const s = top_levels
+            .filter(l => player_id in levels[l])
+            .map(l => levels[l][player_id]);
+          return {
+            player: player,
+            nand: s.map(a => a.nand).reduce((a, b) => a + b),
+            delay: s.map(a => a.delay).reduce((a, b) => a + b),
+            tick: s.map(a => a.tick).reduce((a, b) => a + b),
+            sum: s.map(a => a.sum).reduce((a, b) => a + b),
+          };
+        }).sort(function(x, y) {
+          const sx = x.sum;
+          const sy = y.sum;
+          if (sx < sy) return -1;
+          if (sx > sy) return 1;
+          return 0;
+        });
+      for (const h in honorable_players) {
+        if (++num_results > 100) break;
+        const result = honorable_players[h];
+        if (result.sum != sum_above) {
+          place = num_results;
+          sum_above = result.sum;
+        }
+        rows.push([
+          result.player,
+          place + " [" + i + "]",
+          result["nand"],
+          result["delay"],
+          result["tick"],
+          result["sum"],
+        ]);
+      }
+      if (num_results >= 100) break;
+    }
   }
 
   const p90 = results[Math.floor(results.length * 0.90)];
@@ -696,6 +760,12 @@ function showPlayer(player_id) {
   }
 
   buildTable(heading, bookmark, headers, rows, (container) => {
+    const div = document.createElement("div");
+    const img = document.createElement("img");
+    img.src = "https://turingcomplete.game/avatars/" + player_id + ".jpg";
+    div.appendChild(img);
+    container.appendChild(div);
+
     const link = document.createElement("a");
     link.href = "https://turingcomplete.game/profile/" + player_id;
     const player_name = playerName(player_id);
