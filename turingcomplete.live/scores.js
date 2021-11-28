@@ -179,14 +179,31 @@ function loadBookmarks() {
 }
 
 // ---------------------------------------------------------
+function updateStaleCacheTime() {
+  const updated = localStorage.getItem("updated") || 0;
+  const elapsed = Date.now() - updated;
+  const hours = Math.floor(elapsed / 1000 / 60 / 60);
+  if (hours > 0) {
+    const refreshLabel = document.getElementById("lbl_refresh");
+    refreshLabel.innerText = hours + (hours == 1 ? " hour ago" : " hours ago");
+  }
+}
+
+
+// ---------------------------------------------------------
+let staleCacheInterval = 0;
+
 function refreshApiData() {
   gtag("event", load_complete ? "refresh" : "load");
   const reload = load_complete;
   load_complete = false;
   viewing_cached_data = false;
 
+  if (reload && staleCacheInterval) clearInterval(staleCacheInterval);
   const refresh = document.getElementById("btn_refresh");
+  const refreshLabel = document.getElementById("lbl_refresh");
   refresh.className = "btn btn-outline-primary";
+  refreshLabel.innerText = "";
 
   const title = document.createElement("h2");
   const titleText = document.createTextNode("Downloading scores...");
@@ -204,7 +221,9 @@ function refreshApiData() {
       const delay = Math.max(0, staleCacheMs - elapsed);
       setTimeout(() => {
         // console.log("Cache data is stale");
-        refresh.className = "btn btn-outline-warning";
+        refresh.className = "btn btn-warning";
+        updateStaleCacheTime();
+        staleCacheInterval = setInterval(updateStaleCacheTime, 10 * 1000);
       }, delay);
       handleUsernames(usernames);
       handleScores(scores);
