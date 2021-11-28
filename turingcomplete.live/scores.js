@@ -409,14 +409,11 @@ function showTopPlayers1k() {
 }
 
 function showTopLevels(heading, top_levels) {
-  const headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
+  const headers = ["Player", "Place", "levels", "nand", "delay", "tick", "sum"];
   const rows = [];
 
-  const top_players = Object.keys(levels[top_levels[0]])
-    .filter(p => top_levels.every(l => p in levels[l]));
-
   const bookmarks = readBookmarks();
-  const results = top_players.map(function(player_id) {
+  let results = Object.keys(user_ids).map(function(player_id) {
     const player = {
       href: "#" + player_id,
       text: playerName(player_id),
@@ -424,21 +421,26 @@ function showTopLevels(heading, top_levels) {
     if (bookmarks.includes(player_id)) {
       player["img"] = "bi bi-star";
     }
-    const s = top_levels.map(l => levels[l][player_id]);
+    const s = top_levels.map(l => levels[l][player_id]).filter(Boolean);
+    if (s.length == 0) {
+      return {
+        player: player,
+        solved: 0,
+        nand: 0,
+        delay: 0,
+        tick: 0,
+        sum: 0,
+      }
+    }
     return {
       player: player,
+      solved: s.length,
       nand: s.map(a => a.nand).reduce((a, b) => a + b),
       delay: s.map(a => a.delay).reduce((a, b) => a + b),
       tick: s.map(a => a.tick).reduce((a, b) => a + b),
       sum: s.map(a => a.sum).reduce((a, b) => a + b),
     };
-  }).sort(function(x, y) {
-    const sx = x.sum;
-    const sy = y.sum;
-    if (sx < sy) return -1;
-    if (sx > sy) return 1;
-    return 0;
-  });
+  }).sort((x, y) => ((x.solved === y.solved) ? (x.sum - y.sum) : (y.solved - x.solved)));
 
   let num_results = 0;
   let place = 1;
@@ -462,6 +464,7 @@ function showTopLevels(heading, top_levels) {
     rows.push([
       result["player"],
       place,
+      result["solved"],
       result["nand"],
       result["delay"],
       result["tick"],
@@ -469,58 +472,8 @@ function showTopLevels(heading, top_levels) {
     ]);
   }
 
-  if (num_results < 100) {
-    // Honorable mention for players who have not completed of the levels
-    let sum_above = 0;
-    for (let i = 1; i < top_levels.length; i++) {
-      place = num_results + 1;
-      const honorable_players = Object.keys(levels.crude_awakening)
-        .filter(p => top_levels.filter(l => p in levels[l]).length == (top_levels.length - i))
-        .map(function(player_id) {
-          const player = {
-            href: "#" + player_id,
-            text: playerName(player_id),
-          };
-          if (bookmarks.includes(player_id)) {
-            player["img"] = "bi bi-star";
-          }
-          const s = top_levels
-            .filter(l => player_id in levels[l])
-            .map(l => levels[l][player_id]);
-          return {
-            player: player,
-            nand: s.map(a => a.nand).reduce((a, b) => a + b),
-            delay: s.map(a => a.delay).reduce((a, b) => a + b),
-            tick: s.map(a => a.tick).reduce((a, b) => a + b),
-            sum: s.map(a => a.sum).reduce((a, b) => a + b),
-          };
-        }).sort(function(x, y) {
-          const sx = x.sum;
-          const sy = y.sum;
-          if (sx < sy) return -1;
-          if (sx > sy) return 1;
-          return 0;
-        });
-      for (const h in honorable_players) {
-        if (++num_results > 100) break;
-        const result = honorable_players[h];
-        if (result.sum != sum_above) {
-          place = num_results;
-          sum_above = result.sum;
-        }
-        rows.push([
-          result.player,
-          place + " [" + i + "]",
-          result["nand"],
-          result["delay"],
-          result["tick"],
-          result["sum"],
-        ]);
-      }
-      if (num_results >= 100) break;
-    }
-  }
-
+  // Only show players who have solved all levels in the histogram
+  results = results.filter(r => r.solved == top_levels.length);
   const p90 = results[Math.floor(results.length * 0.90)];
   const sum_limit = p90.sum / 0.90;
   for (const r in results) {
