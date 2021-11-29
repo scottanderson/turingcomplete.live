@@ -116,22 +116,9 @@ function createBookmark(bookmark) {
 }
 
 function bookmarkSort(x, y) {
-  if (!isNaN(parseInt(x))) {
-    x = parseInt(x);
-    if (!isNaN(parseInt(y))) {
-      y = parseInt(y);
-      if (x < y) return -1;
-      if (x > y) return 1;
-      return 0;
-    }
-    return -1;
-  }
-  if (!isNaN(parseInt(y))) {
-    return 1;
-  }
-  if (x < y) return -1;
-  if (x > y) return 1;
-  return 0;
+  const a = (x in levels);
+  const b = (y in levels);
+  return (a == b) ? (x - y) : (a - b);
 }
 
 function toggleBookmark(bookmark) {
@@ -179,27 +166,54 @@ function loadBookmarks() {
 }
 
 // ---------------------------------------------------------
-function updateStaleCacheTime() {
+function apiCacheAge() {
   const updated = localStorage.getItem("updated") || 0;
   const elapsed = Date.now() - updated;
+  return elapsed;
+}
+
+function apiCacheUpdated() {
+  localStorage.setItem("updated", Date.now());
+}
+
+function updateStaleCacheTime() {
+  const elapsed = apiCacheAge();
   const hours = Math.floor(elapsed / 1000 / 60 / 60);
   if (hours > 0) {
+    const refresh = document.getElementById("btn_refresh");
+    refresh.className = "btn btn-" + (hours == 1 ? "success" : hours < 8 ? "warning" : "danger");
     const refreshLabel = document.getElementById("lbl_refresh");
     refreshLabel.innerText = hours + (hours == 1 ? " hour ago" : " hours ago");
   }
 }
 
-
-// ---------------------------------------------------------
 let staleCacheInterval = 0;
 
+function staleCacheTimer() {
+  // console.log("Cache data is stale");
+  updateStaleCacheTime();
+  staleCacheInterval = setInterval(updateStaleCacheTime, 10 * 1000);
+}
+
+function enableStaleCacheTimer() {
+  const elapsed = apiCacheAge();
+  const staleCacheMs = 1000 * 60 * 60; // 1 hour
+  const delay = Math.max(0, staleCacheMs - elapsed);
+  setTimeout(staleCacheTimer, delay);
+}
+
+// ---------------------------------------------------------
 function refreshApiData() {
   gtag("event", load_complete ? "refresh" : "load");
   const reload = load_complete;
   load_complete = false;
   viewing_cached_data = false;
 
-  if (reload && staleCacheInterval) clearInterval(staleCacheInterval);
+  if (staleCacheInterval) {
+    clearInterval(staleCacheInterval);
+    staleCacheInterval = 0;
+  }
+
   const refresh = document.getElementById("btn_refresh");
   const refreshLabel = document.getElementById("lbl_refresh");
   refresh.className = "btn btn-outline-primary";
@@ -210,21 +224,13 @@ function refreshApiData() {
   title.appendChild(titleText);
   document.getElementById("content").replaceChildren(title);
 
-  loadApiData(reload)
+  const cacheTooOld = (apiCacheAge() > /*8 hours*/ 1000 * 60 * 60 * 8);
+  loadApiData(reload || cacheTooOld)
     .then(([usernames, scores, level_meta]) => {
       if (!viewing_cached_data) {
-        localStorage.setItem("updated", Date.now());
+        apiCacheUpdated();
       }
-      const updated = localStorage.getItem("updated") || 0;
-      const elapsed = Date.now() - updated;
-      const staleCacheMs = 1000 * 60 * 60; // 1 hour
-      const delay = Math.max(0, staleCacheMs - elapsed);
-      setTimeout(() => {
-        // console.log("Cache data is stale");
-        refresh.className = "btn btn-warning";
-        updateStaleCacheTime();
-        staleCacheInterval = setInterval(updateStaleCacheTime, 10 * 1000);
-      }, delay);
+      enableStaleCacheTimer();
       handleUsernames(usernames);
       handleScores(scores);
       handleLevelMeta(level_meta);
