@@ -444,10 +444,10 @@ function showTopLevels(heading, top_levels) {
     return {
       player: player,
       solved: s.length,
-      nand: s.map(a => a.nand).reduce((a, b) => a + b, 0),
-      delay: s.map(a => a.delay).reduce((a, b) => a + b, 0),
-      tick: s.map(a => a.tick).reduce((a, b) => a + b, 0),
-      sum: s.map(a => a.sum).reduce((a, b) => a + b, 0),
+      nand: s.reduce((sum, b) => sum + b.nand, 0),
+      delay: s.reduce((sum, b) => sum + b.delay, 0),
+      tick: s.reduce((sum, b) => sum + b.tick, 0),
+      sum: s.reduce((sum, b) => sum + b.sum, 0),
     };
   }).sort((x, y) => ((x.solved === y.solved) ? (x.sum - y.sum) : (y.solved - x.solved)));
 
