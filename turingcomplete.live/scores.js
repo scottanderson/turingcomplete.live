@@ -441,23 +441,13 @@ function showTopLevels(heading, top_levels) {
       player["img"] = "bi bi-star";
     }
     const s = top_levels.map(l => levels[l][player_id]).filter(Boolean);
-    if (s.length == 0) {
-      return {
-        player: player,
-        solved: 0,
-        nand: 0,
-        delay: 0,
-        tick: 0,
-        sum: 0,
-      }
-    }
     return {
       player: player,
       solved: s.length,
-      nand: s.map(a => a.nand).reduce((a, b) => a + b),
-      delay: s.map(a => a.delay).reduce((a, b) => a + b),
-      tick: s.map(a => a.tick).reduce((a, b) => a + b),
-      sum: s.map(a => a.sum).reduce((a, b) => a + b),
+      nand: s.map(a => a.nand).reduce((a, b) => a + b, 0),
+      delay: s.map(a => a.delay).reduce((a, b) => a + b, 0),
+      tick: s.map(a => a.tick).reduce((a, b) => a + b, 0),
+      sum: s.map(a => a.sum).reduce((a, b) => a + b, 0),
     };
   }).sort((x, y) => ((x.solved === y.solved) ? (x.sum - y.sum) : (y.solved - x.solved)));
 
