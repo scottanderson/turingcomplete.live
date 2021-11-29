@@ -296,16 +296,16 @@ function handleUsernames(data) {
 
 function handleScores(data) {
   // Server scores (user_id, level_id, nand, delay, tick)
-  const scores = data.trim().split(/\n/);
-  for (let i = 0; i < scores.length; i++) {
-    const x = scores[i].split(/,/, 5);
-    const user_id = x[0];
+  let scores_count = 0
+  for (match of data.matchAll(/(\d+),(\w+),(\d+),(\d+),(\d+)(\n|$)/g)) {
+    scores_count++;
+    const user_id = match[1];
     const user_name = playerName(user_id);
-    const level_id = x[1];
-    const nand = parseInt(x[2]);
-    const delay = parseInt(x[3]);
-    const tick = parseInt(x[4]);
-    if (!(level_id in levels)) {
+    const level_id = match[2];
+    const nand = parseInt(match[3]);
+    const delay = parseInt(match[4]);
+    const tick = parseInt(match[5]);
+    if (!levels[level_id]) {
       levels[level_id] = {};
     }
     levels[level_id][user_id] = {
@@ -315,7 +315,7 @@ function handleScores(data) {
       sum: nand + delay + tick
     };
   }
-  console.log("Read " + scores.length + " scores");
+  console.log("Read " + scores_count + " scores");
 }
 
 function handleLevelMeta(level_meta) {
@@ -411,7 +411,7 @@ function showTopPlayers() {
   const heading = "Total combined scores";
 
   const top_levels = Object.keys(levels)
-    .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)); // Scored
+    .filter(l => metadata[l].scored); // Scored
 
   showTopLevels(heading, top_levels);
 }
@@ -421,7 +421,7 @@ function showTopPlayers1k() {
   const heading = "Total combined scores for levels with >1000 solvers";
 
   const top_levels = Object.keys(levels)
-    .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)) // Scored
+    .filter(l => metadata[l].scored) // Scored
     .filter(l => Object.keys(levels[l]).length > 1000); // More than 1000 solvers
 
   showTopLevels(heading, top_levels);
@@ -441,23 +441,13 @@ function showTopLevels(heading, top_levels) {
       player["img"] = "bi bi-star";
     }
     const s = top_levels.map(l => levels[l][player_id]).filter(Boolean);
-    if (s.length == 0) {
-      return {
-        player: player,
-        solved: 0,
-        nand: 0,
-        delay: 0,
-        tick: 0,
-        sum: 0,
-      }
-    }
     return {
       player: player,
       solved: s.length,
-      nand: s.map(a => a.nand).reduce((a, b) => a + b),
-      delay: s.map(a => a.delay).reduce((a, b) => a + b),
-      tick: s.map(a => a.tick).reduce((a, b) => a + b),
-      sum: s.map(a => a.sum).reduce((a, b) => a + b),
+      nand: s.reduce((sum, b) => sum + b.nand, 0),
+      delay: s.reduce((sum, b) => sum + b.delay, 0),
+      tick: s.reduce((sum, b) => sum + b.tick, 0),
+      sum: s.reduce((sum, b) => sum + b.sum, 0),
     };
   }).sort((x, y) => ((x.solved === y.solved) ? (x.sum - y.sum) : (y.solved - x.solved)));
 
