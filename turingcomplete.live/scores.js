@@ -305,7 +305,7 @@ function handleScores(data) {
     const nand = parseInt(x[2]);
     const delay = parseInt(x[3]);
     const tick = parseInt(x[4]);
-    if (!(level_id in levels)) {
+    if (!levels[level_id]) {
       levels[level_id] = {};
     }
     levels[level_id][user_id] = {
