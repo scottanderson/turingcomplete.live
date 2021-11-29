@@ -296,15 +296,15 @@ function handleUsernames(data) {
 
 function handleScores(data) {
   // Server scores (user_id, level_id, nand, delay, tick)
-  const scores = data.trim().split(/\n/);
-  for (let i = 0; i < scores.length; i++) {
-    const x = scores[i].split(/,/, 5);
-    const user_id = x[0];
+  let scores_count = 0
+  for (match of data.matchAll(/(\d+),(\w+),(\d+),(\d+),(\d+)(\n|$)/g)) {
+    scores_count++;
+    const user_id = match[1];
     const user_name = playerName(user_id);
-    const level_id = x[1];
-    const nand = parseInt(x[2]);
-    const delay = parseInt(x[3]);
-    const tick = parseInt(x[4]);
+    const level_id = match[2];
+    const nand = parseInt(match[3]);
+    const delay = parseInt(match[4]);
+    const tick = parseInt(match[5]);
     if (!levels[level_id]) {
       levels[level_id] = {};
     }
@@ -315,7 +315,7 @@ function handleScores(data) {
       sum: nand + delay + tick
     };
   }
-  console.log("Read " + scores.length + " scores");
+  console.log("Read " + scores_count + " scores");
 }
 
 function handleLevelMeta(level_meta) {
