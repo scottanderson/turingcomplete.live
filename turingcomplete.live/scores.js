@@ -411,7 +411,7 @@ function showTopPlayers() {
   const heading = "Total combined scores";
 
   const top_levels = Object.keys(levels)
-    .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)); // Scored
+    .filter(l => metadata[l].scored); // Scored
 
   showTopLevels(heading, top_levels);
 }
@@ -421,7 +421,7 @@ function showTopPlayers1k() {
   const heading = "Total combined scores for levels with >1000 solvers";
 
   const top_levels = Object.keys(levels)
-    .filter(l => Object.keys(levels[l]).some(x => levels[l][x]["sum"] > 0)) // Scored
+    .filter(l => metadata[l].scored) // Scored
     .filter(l => Object.keys(levels[l]).length > 1000); // More than 1000 solvers
 
   showTopLevels(heading, top_levels);
