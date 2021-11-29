@@ -239,7 +239,7 @@ function refreshApiData() {
       loadHashPage();
     })
     .catch((error) => {
-      refresh.className = "btn btn-outline-danger";
+      refresh.className = "btn btn-danger";
       const title = document.createElement("h2");
       const titleText = document.createTextNode("Failed to load: " + error);
       title.appendChild(titleText);
@@ -267,10 +267,15 @@ async function loadApiData(reload) {
 // ---------------------------------------------------------
 async function fetchWithCache(url) {
   const cache = await caches.open("scores");
-  const response = await fetch(url);
-  if (response && response.ok) {
-    cache.put(url, response);
-  }
+  let cache_updated = false;
+  try {
+    const response = await fetch(url);
+    if (response && response.ok) {
+      cache.put(url, response);
+      cache_updated = true;
+    }
+  } catch (error) {}
+  if (!cache_updated) viewing_cached_data = true;
   return await cache.match(url);
 }
 
@@ -360,14 +365,8 @@ function showLevels() {
   ];
   const rows = [];
 
-  // Sort levels by number of solvers
-  const sorted_levels = Object.keys(levels).sort(function(x, y) {
-    const sx = Object.keys(levels[x]).length;
-    const sy = Object.keys(levels[y]).length;
-    if (sx < sy) return 1;
-    if (sx > sy) return -1;
-    return 0;
-  });
+  const sorted_levels = Object.keys(levels)
+    .sort((x, y) => metadata[x].sort_key - metadata[y].sort_key);
   const bookmarks = readBookmarks();
   for (level_id in sorted_levels) {
     level_id = sorted_levels[level_id];
