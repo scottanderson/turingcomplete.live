@@ -35,12 +35,21 @@ function loadHashPage() {
 
 // ---------------------------------------------------------
 function levelName(level_id) {
+  if (!(level_id in metadata)) return level_id;
   return metadata[level_id].name || level_id;
 }
 
 function playerName(player_id) {
+  if (!(player_id in user_ids)) return player_id;
   return user_ids[player_id] || player_id;
 }
+
+function placeMedal(place) {
+  if (place == 1) return "\u{1f947}";
+  if (place == 2) return "\u{1f948}";
+  if (place == 3) return "\u{1f949}";
+  return place;
+ }
 
 // ---------------------------------------------------------
 function activateOverviewButton() {
@@ -116,8 +125,8 @@ function createBookmark(bookmark) {
 }
 
 function bookmarkSort(x, y) {
-  const a = (x in levels);
-  const b = (y in levels);
+  const a = isNaN(parseInt(x));
+  const b = isNaN(parseInt(y));
   return (a == b) ? (x - y) : (a - b);
 }
 
@@ -271,7 +280,7 @@ async function fetchWithCache(url) {
   try {
     const response = await fetch(url);
     if (response && response.ok) {
-      cache.put(url, response);
+      await cache.put(url, response);
       cache_updated = true;
     }
   } catch (error) {}
@@ -475,6 +484,7 @@ function showTopLevels(heading, top_levels) {
       }
     }
 
+    place = placeMedal(place);
     rows.push([
       result["player"],
       place,
@@ -592,6 +602,7 @@ function showLevel(level_id) {
     if (bookmarks.includes(solver_id)) {
       player["img"] = "bi bi-star";
     }
+    place = placeMedal(place);
     rows.push([
       player,
       place,
@@ -715,6 +726,7 @@ function showPlayer(player_id) {
     if (bookmarks.includes(level_id)) {
       level["img"] = "bi bi-star";
     }
+    place = placeMedal(place);
     rows.push([
       scored ? level : level_name,
       place,
