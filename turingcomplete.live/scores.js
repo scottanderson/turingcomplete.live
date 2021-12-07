@@ -35,12 +35,21 @@ function loadHashPage() {
 
 // ---------------------------------------------------------
 function levelName(level_id) {
+  if (!(level_id in metadata)) return level_id;
   return metadata[level_id].name || level_id;
 }
 
 function playerName(player_id) {
+  if (!(player_id in user_ids)) return player_id;
   return user_ids[player_id] || player_id;
 }
+
+function placeMedal(place) {
+  if (place == 1) return "\u{1f947}";
+  if (place == 2) return "\u{1f948}";
+  if (place == 3) return "\u{1f949}";
+  return place;
+ }
 
 // ---------------------------------------------------------
 function activateOverviewButton() {
@@ -116,22 +125,9 @@ function createBookmark(bookmark) {
 }
 
 function bookmarkSort(x, y) {
-  if (!isNaN(parseInt(x))) {
-    x = parseInt(x);
-    if (!isNaN(parseInt(y))) {
-      y = parseInt(y);
-      if (x < y) return -1;
-      if (x > y) return 1;
-      return 0;
-    }
-    return -1;
-  }
-  if (!isNaN(parseInt(y))) {
-    return 1;
-  }
-  if (x < y) return -1;
-  if (x > y) return 1;
-  return 0;
+  const a = isNaN(parseInt(x));
+  const b = isNaN(parseInt(y));
+  return (a == b) ? (x - y) : (a - b);
 }
 
 function toggleBookmark(bookmark) {
@@ -179,27 +175,54 @@ function loadBookmarks() {
 }
 
 // ---------------------------------------------------------
-function updateStaleCacheTime() {
+function apiCacheAge() {
   const updated = localStorage.getItem("updated") || 0;
   const elapsed = Date.now() - updated;
+  return elapsed;
+}
+
+function apiCacheUpdated() {
+  localStorage.setItem("updated", Date.now());
+}
+
+function updateStaleCacheTime() {
+  const elapsed = apiCacheAge();
   const hours = Math.floor(elapsed / 1000 / 60 / 60);
   if (hours > 0) {
+    const refresh = document.getElementById("btn_refresh");
+    refresh.className = "btn btn-" + (hours == 1 ? "success" : hours < 8 ? "warning" : "danger");
     const refreshLabel = document.getElementById("lbl_refresh");
     refreshLabel.innerText = hours + (hours == 1 ? " hour ago" : " hours ago");
   }
 }
 
-
-// ---------------------------------------------------------
 let staleCacheInterval = 0;
 
+function staleCacheTimer() {
+  // console.log("Cache data is stale");
+  updateStaleCacheTime();
+  staleCacheInterval = setInterval(updateStaleCacheTime, 10 * 1000);
+}
+
+function enableStaleCacheTimer() {
+  const elapsed = apiCacheAge();
+  const staleCacheMs = 1000 * 60 * 60; // 1 hour
+  const delay = Math.max(0, staleCacheMs - elapsed);
+  setTimeout(staleCacheTimer, delay);
+}
+
+// ---------------------------------------------------------
 function refreshApiData() {
   gtag("event", load_complete ? "refresh" : "load");
   const reload = load_complete;
   load_complete = false;
   viewing_cached_data = false;
 
-  if (reload && staleCacheInterval) clearInterval(staleCacheInterval);
+  if (staleCacheInterval) {
+    clearInterval(staleCacheInterval);
+    staleCacheInterval = 0;
+  }
+
   const refresh = document.getElementById("btn_refresh");
   const refreshLabel = document.getElementById("lbl_refresh");
   refresh.className = "btn btn-outline-primary";
@@ -210,21 +233,13 @@ function refreshApiData() {
   title.appendChild(titleText);
   document.getElementById("content").replaceChildren(title);
 
-  loadApiData(reload)
+  const cacheTooOld = (apiCacheAge() > /*8 hours*/ 1000 * 60 * 60 * 8);
+  loadApiData(reload || cacheTooOld)
     .then(([usernames, scores, level_meta]) => {
       if (!viewing_cached_data) {
-        localStorage.setItem("updated", Date.now());
+        apiCacheUpdated();
       }
-      const updated = localStorage.getItem("updated") || 0;
-      const elapsed = Date.now() - updated;
-      const staleCacheMs = 1000 * 60 * 60; // 1 hour
-      const delay = Math.max(0, staleCacheMs - elapsed);
-      setTimeout(() => {
-        // console.log("Cache data is stale");
-        refresh.className = "btn btn-warning";
-        updateStaleCacheTime();
-        staleCacheInterval = setInterval(updateStaleCacheTime, 10 * 1000);
-      }, delay);
+      enableStaleCacheTimer();
       handleUsernames(usernames);
       handleScores(scores);
       handleLevelMeta(level_meta);
@@ -233,7 +248,7 @@ function refreshApiData() {
       loadHashPage();
     })
     .catch((error) => {
-      refresh.className = "btn btn-outline-danger";
+      refresh.className = "btn btn-danger";
       const title = document.createElement("h2");
       const titleText = document.createTextNode("Failed to load: " + error);
       title.appendChild(titleText);
@@ -261,10 +276,15 @@ async function loadApiData(reload) {
 // ---------------------------------------------------------
 async function fetchWithCache(url) {
   const cache = await caches.open("scores");
-  const response = await fetch(url);
-  if (response && response.ok) {
-    cache.put(url, response);
-  }
+  let cache_updated = false;
+  try {
+    const response = await fetch(url);
+    if (response && response.ok) {
+      await cache.put(url, response);
+      cache_updated = true;
+    }
+  } catch (error) {}
+  if (!cache_updated) viewing_cached_data = true;
   return await cache.match(url);
 }
 
@@ -354,14 +374,8 @@ function showLevels() {
   ];
   const rows = [];
 
-  // Sort levels by number of solvers
-  const sorted_levels = Object.keys(levels).sort(function(x, y) {
-    const sx = Object.keys(levels[x]).length;
-    const sy = Object.keys(levels[y]).length;
-    if (sx < sy) return 1;
-    if (sx > sy) return -1;
-    return 0;
-  });
+  const sorted_levels = Object.keys(levels)
+    .sort((x, y) => metadata[x].sort_key - metadata[y].sort_key);
   const bookmarks = readBookmarks();
   for (level_id in sorted_levels) {
     level_id = sorted_levels[level_id];
@@ -470,6 +484,7 @@ function showTopLevels(heading, top_levels) {
       }
     }
 
+    place = placeMedal(place);
     rows.push([
       result["player"],
       place,
@@ -587,6 +602,7 @@ function showLevel(level_id) {
     if (bookmarks.includes(solver_id)) {
       player["img"] = "bi bi-star";
     }
+    place = placeMedal(place);
     rows.push([
       player,
       place,
@@ -710,6 +726,7 @@ function showPlayer(player_id) {
     if (bookmarks.includes(level_id)) {
       level["img"] = "bi bi-star";
     }
+    place = placeMedal(place);
     rows.push([
       scored ? level : level_name,
       place,
