@@ -49,7 +49,7 @@ function placeMedal(place) {
   if (place == 2) return "\u{1f948}";
   if (place == 3) return "\u{1f949}";
   return place;
- }
+}
 
 // ---------------------------------------------------------
 function activateOverviewButton() {
@@ -684,6 +684,11 @@ function showPlayer(player_id) {
     return 0;
   });
   const bookmarks = readBookmarks();
+  const medals = {
+    1: 0,
+    2: 0,
+    3: 0,
+  };
   for (const l in sorted_levels) {
     const level_id = sorted_levels[l];
     const level_name = levelName(level_id);
@@ -726,6 +731,9 @@ function showPlayer(player_id) {
     if (bookmarks.includes(level_id)) {
       level["img"] = "bi bi-star";
     }
+    if (parseInt(place) <= 3) {
+      medals[place]++;
+    }
     place = placeMedal(place);
     rows.push([
       scored ? level : level_name,
@@ -737,6 +745,7 @@ function showPlayer(player_id) {
       sum
     ]);
   }
+  const medalsString = Object.entries(medals).map(([place, count]) => `${placeMedal(place)}x${count}`).join(' ')
 
   buildTable(heading, bookmark, headers, rows, (container) => {
     const div = document.createElement("div");
@@ -744,6 +753,10 @@ function showPlayer(player_id) {
     img.src = "https://turingcomplete.game/avatars/" + player_id + ".jpg";
     div.appendChild(img);
     container.appendChild(div);
+
+    const medalsDiv = document.createElement("div");
+    medalsDiv.innerHTML = medalsString;
+    container.appendChild(medalsDiv);
 
     const link = document.createElement("a");
     link.href = "https://turingcomplete.game/profile/" + player_id;
