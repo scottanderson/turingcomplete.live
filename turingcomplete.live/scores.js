@@ -319,20 +319,18 @@ async function cacheWithFetch(url) {
 // ---------------------------------------------------------
 function handleUsernames(data) {
   // Server id to username relationship
-  const usernames = data.trim().split(/\n/);
-  for (let i = 0; i < usernames.length; i++) {
-    const x = usernames[i].split(/,/, 2);
-    const id = x[0];
-    const name = x[1];
+  for (const match of data.matchAll(/(\d+),(.*)(\n|$)/g)) {
+    const id = match[1];
+    const name = match[2];
     user_ids[id] = name;
   }
-  console.log("Read " + usernames.length + " usernames");
+  console.log("Read " + Object.keys(user_ids).length + " usernames");
 }
 
 function handleScores(data) {
   // Server scores (user_id, level_id, nand, delay, tick)
-  let scores_count = 0
-  for (match of data.matchAll(/(\d+),(\w+),(\d+),(\d+),(\d+)(\n|$)/g)) {
+  let scores_count = 0;
+  for (const match of data.matchAll(/(\d+),(\w+),(\d+),(\d+),(\d+)(\n|$)/g)) {
     scores_count++;
     const user_id = match[1];
     const user_name = playerName(user_id);
@@ -347,7 +345,7 @@ function handleScores(data) {
       nand: nand,
       delay: delay,
       tick: tick,
-      sum: nand + delay + tick
+      sum: nand + delay + tick,
     };
   }
   console.log("Read " + scores_count + " scores");
@@ -356,17 +354,17 @@ function handleScores(data) {
 function handleLevelMeta(level_meta) {
   // Meta data for levels (enum_number, enum_id, title, is_architecture, no_score).
   // The order here is the same as on player profiles.
-  const data = level_meta.trim().split(/\n/);
-  for (let i = 0; i < data.length; i++) {
-    const m = data[i].split(/,/);
-    const level_id = m[1];
+  let meta_count = 0;
+  for (const match of level_meta.matchAll(/(\d+),(\w+),([\s\w]*),(\w+),(\w+)(\n|$)/g)) {
+    const level_id = match[2];
     metadata[level_id] = {
-      sort_key: parseInt(i),
-      name: m[2],
-      arch: m[3] === "true",
-      scored: m[4] === "false",
+      sort_key: parseInt(meta_count++),
+      name: match[3],
+      arch: match[4] === "true",
+      scored: match[5] === "false",
     };
   }
+  console.log("Read " + meta_count + " levels");
 }
 
 // ---------------------------------------------------------
