@@ -288,12 +288,17 @@ async function fetchWithCache(url) {
   const cache = await caches.open("scores");
   let cache_updated = false;
   try {
+    console.log("Fetching: " + url);
     const response = await fetch(url);
     if (response && response.ok) {
       await cache.put(url, response);
       cache_updated = true;
+    } else {
+      console.log("Bad response: " + url);
     }
-  } catch (error) {}
+  } catch (error) {
+    console.log("Fetch failed: " + url);
+  }
   if (!cache_updated) viewing_cached_data = true;
   return await cache.match(url);
 }
@@ -302,11 +307,11 @@ async function cacheWithFetch(url) {
   const cache = await caches.open("scores");
   const cachedResponse = await cache.match(url);
   if (cachedResponse && cachedResponse.ok) {
-    // console.log("Retrieved cached data");
+    console.log("Cached: " + url);
     viewing_cached_data = true;
     return cachedResponse;
   }
-  // console.log("Fetching fresh data");
+  console.log("Fetching: " + url);
   await cache.add(url);
   return await cache.match(url);
 }
