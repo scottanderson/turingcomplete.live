@@ -377,6 +377,7 @@ function calculateMedian(list) {
 // ---------------------------------------------------------
 function showLevels() {
   activateOverviewButton();
+  document.title = "TC Leaderboard - Level Overview";
   const heading = "Level Overview";
   const headers = [
     "Level",
@@ -435,6 +436,7 @@ function showLevels() {
 // ---------------------------------------------------------
 function showTopPlayers() {
   activateTopPlayersButton();
+  document.title = "TC Leaderboard - Top Players";
   const heading = "Total combined scores";
 
   const top_levels = Object.keys(levels)
@@ -445,6 +447,7 @@ function showTopPlayers() {
 
 function showTopPlayers1k() {
   activateTopPlayers1kButton();
+  document.title = "TC Leaderboard - Top Players (>1k solves)";
   const heading = "Total combined scores for levels with >1000 solvers";
 
   const top_levels = Object.keys(levels)
@@ -566,6 +569,7 @@ function showTopLevels(heading, top_levels) {
 function showLevel(level_id) {
   activateLevelButton(level_id);
   const level_name = levelName(level_id);
+  document.title = "TC Leaderboard - " + level_name;
   const heading = "Leaderboard for " + level_name;
   const bookmark = createBookmark(level_id);
   const headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
@@ -683,6 +687,7 @@ function showLevel(level_id) {
 function showPlayer(player_id) {
   activatePlayerButton(player_id);
   const player_name = playerName(player_id);
+  document.title = "TC Leaderboard - " + player_name;
   const heading = "Stats for " + player_name;
   const bookmark = createBookmark(player_id);
   const headers = ["Level", "Place", "# tied", "nand", "delay", "tick", "sum"];
