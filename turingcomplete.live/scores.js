@@ -395,14 +395,14 @@ function showLevels() {
     level_id = sorted_levels[level_id];
     const level_name = levelName(level_id);
     const solvers = Object.keys(levels[level_id]);
-    const sums = solvers.map(x => levels[level_id][x]["sum"]);
-    const scored = metadata[level_id]["scored"];
+    const sums = solvers.map(x => levels[level_id][x].sum);
+    const scored = metadata[level_id].scored;
     const num_solvers = solvers.length;
     let min, median, first;
     if (scored) {
       min = Math.min(...sums);
       median = calculateMedian(sums);
-      first = solvers.filter((s) => levels[level_id][s]["sum"] <= min);
+      first = solvers.filter((s) => levels[level_id][s].sum <= min);
       if (first.length == 1) {
         first = playerName(first[0]);
       } else {
@@ -419,7 +419,7 @@ function showLevels() {
       text: level_name,
     };
     if (bookmarks.includes(level_id)) {
-      level["img"] = "bi bi-star";
+      level.img = "bi bi-star";
     }
     rows.push([
       scored ? level : level_name,
@@ -468,7 +468,7 @@ function showTopLevels(heading, top_levels) {
       text: playerName(player_id),
     };
     if (bookmarks.includes(player_id)) {
-      player["img"] = "bi bi-star";
+      player.img = "bi bi-star";
     }
     const s = top_levels.map(l => levels[l][player_id]).filter(Boolean);
     return {
@@ -493,22 +493,21 @@ function showTopLevels(heading, top_levels) {
 
     if (r > 0) {
       const result_above = results[r - 1];
-      const sum = result["sum"];
-      const sum_above = result_above["sum"];
+      const sum = result.sum;
+      const sum_above = result_above.sum;
       if (sum != sum_above) {
         place = num_results;
       }
     }
 
-    place = placeMedal(place);
     rows.push([
-      result["player"],
-      place,
-      result["solved"],
-      result["nand"],
-      result["delay"],
-      result["tick"],
-      result["sum"],
+      result.player,
+      placeMedal(place),
+      result.solved,
+      result.nand,
+      result.delay,
+      result.tick,
+      result.sum,
     ]);
   }
 
@@ -520,8 +519,8 @@ function showTopLevels(heading, top_levels) {
     const result = results[r];
     if (result.sum >= sum_limit) break;
     data.push([
-      result["player"]["text"],
-      result["sum"],
+      result.player.text,
+      result.sum,
     ]);
   }
 
@@ -576,12 +575,8 @@ function showLevel(level_id) {
   const rows = [];
 
   // Sort solvers by lowest sum
-  const sorted_solvers = Object.keys(levels[level_id]).sort(function(x, y) {
-    const xs = levels[level_id][x]["sum"];
-    const ys = levels[level_id][y]["sum"];
-    if (xs < ys) return -1;
-    if (xs > ys) return 1;
-    return 0;
+  const sorted_solvers = Object.entries(levels[level_id]).sort(function([x, a], [y, b]) {
+    return a.sum - b.sum;
   });
 
   let solves = 0;
@@ -591,23 +586,21 @@ function showLevel(level_id) {
     ["solver", "sum"]
   ];
   const ticksScored =
-    metadata[level_id]["scored"] &&
-    metadata[level_id]["arch"];
+    metadata[level_id].scored &&
+    metadata[level_id].arch;
   for (const s in sorted_solvers) {
     if (++solves > 100) break; // Only show 100 results
 
-    const solver_id = sorted_solvers[s];
+    const [solver_id, solver] = sorted_solvers[s];
     const solver_name = playerName(solver_id);
-    const solver = levels[level_id][solver_id];
-    const nand = solver["nand"];
-    const delay = solver["delay"];
-    const tick = ticksScored ? solver["tick"] : "-";
-    const sum = solver["sum"];
+    const nand = solver.nand;
+    const delay = solver.delay;
+    const tick = ticksScored ? solver.tick : "-";
+    const sum = solver.sum;
 
     if (s > 0) {
-      const solver_id_above = sorted_solvers[s - 1];
-      const solver_above = levels[level_id][solver_id_above];
-      const sum_above = solver_above["sum"];
+      const [solver_id_above, solver_above] = sorted_solvers[s - 1];
+      const sum_above = solver_above.sum;
       if (sum != sum_above) {
         place = solves;
       }
@@ -617,7 +610,7 @@ function showLevel(level_id) {
       text: solver_name,
     };
     if (bookmarks.includes(solver_id)) {
-      player["img"] = "bi bi-star";
+      player.img = "bi bi-star";
     }
     place = placeMedal(place);
     rows.push([
@@ -630,12 +623,11 @@ function showLevel(level_id) {
     ]);
   }
   const p90 = sorted_solvers[Math.floor(sorted_solvers.length * 0.90)];
-  const sum_limit = Math.min(99999, levels[level_id][p90]["sum"] / 0.90);
+  const sum_limit = Math.min(99999, p90[1].sum / 0.90);
   for (const s in sorted_solvers) {
-    const solver_id = sorted_solvers[s];
+    const [solver_id, solver] = sorted_solvers[s];
     const solver_name = playerName(solver_id);
-    const solver = levels[level_id][solver_id];
-    const sum = solver["sum"];
+    const sum = solver.sum;
     if (sum >= sum_limit) break;
     data.push([
       solver_name,
@@ -720,24 +712,24 @@ function showPlayer(player_id) {
     const solves = Object.keys(levels[level_id])
       .map(x => levels[level_id][x]);
     const ticksScored =
-      metadata[level_id]["scored"] &&
-      metadata[level_id]["arch"];
+      metadata[level_id].scored &&
+      metadata[level_id].arch;
     const scored =
-      metadata[level_id]["scored"];
+      metadata[level_id].scored;
     if (solved && scored) {
       const player_score = levels[level_id][player_id];
-      nand = player_score["nand"];
-      delay = player_score["delay"];
+      nand = player_score.nand;
+      delay = player_score.delay;
       if (ticksScored) {
-        tick = player_score["tick"];
+        tick = player_score.tick;
       }
-      sum = player_score["sum"];
+      sum = player_score.sum;
       ties = solves
-        .filter(x => x["sum"] == sum)
+        .filter(x => x.sum == sum)
         .length;
       if (ties == 1) ties = "-";
       place = solves
-        .filter(x => x["sum"] < sum)
+        .filter(x => x.sum < sum)
         .length + 1;
     } else if (solved) {
       place = "unscored";
@@ -747,7 +739,7 @@ function showPlayer(player_id) {
       text: level_name,
     };
     if (bookmarks.includes(level_id)) {
-      level["img"] = "bi bi-star";
+      level.img = "bi bi-star";
     }
     if (parseInt(place) <= 3) {
       medals[place]++;
@@ -826,10 +818,10 @@ function buildTable(heading, bookmark, headers, rows, extra) {
         const cellText = document.createTextNode(rows_rc);
         cell.appendChild(cellText);
       } else {
-        const cellText = document.createTextNode(rows_rc["text"]);
+        const cellText = document.createTextNode(rows_rc.text);
         if ("href" in rows_rc) {
           const a = document.createElement("a");
-          a.href = rows_rc["href"];
+          a.href = rows_rc.href;
           a.appendChild(cellText);
           cell.appendChild(a);
         } else {
@@ -838,7 +830,7 @@ function buildTable(heading, bookmark, headers, rows, extra) {
         cell.appendChild(document.createTextNode(" "));
         if ("img" in rows_rc) {
           const i = document.createElement("i");
-          i.className = rows_rc["img"];
+          i.className = rows_rc.img;
           cell.appendChild(i);
         }
       }
