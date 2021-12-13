@@ -97,6 +97,8 @@ function createButton(text, hash) {
   button.setAttribute("id", "btn_" + hash);
   button.className = "btn btn-outline-primary";
   button.setAttribute("onclick", "window.location.hash='" + hash + "'");
+  button.setAttribute("title", "#" + hash);
+
   const buttonText = document.createTextNode(text);
   button.appendChild(buttonText);
   return button;
@@ -183,32 +185,42 @@ function apiCacheAge() {
 
 function apiCacheUpdated() {
   localStorage.setItem("updated", Date.now());
+  clearStaleCacheTime();
 }
 
 function updateStaleCacheTime() {
   const elapsed = apiCacheAge();
   const hours = Math.floor(elapsed / 1000 / 60 / 60);
   if (hours > 0) {
-    const refresh = document.getElementById("btn_refresh");
-    refresh.className = "btn btn-" + (hours == 1 ? "success" : hours < 8 ? "warning" : "danger");
-    const refreshLabel = document.getElementById("lbl_refresh");
-    refreshLabel.innerText = hours + (hours == 1 ? " hour ago" : " hours ago");
+    const color = (hours == 1 ? "success" : hours < 8 ? "warning" : "danger");
+    const title = hours + (hours == 1 ? " hour ago" : " hours ago");
+    updateRefreshButton(color, title);
   }
+}
+
+function updateRefreshButton(color, title) {
+  const refresh = document.getElementById("btn_refresh");
+  const refreshLabel = document.getElementById("lbl_refresh");
+  refresh.className = "btn btn-" + color;
+  refresh.setAttribute("title", title);
+  refreshLabel.innerText = title;
+}
+
+function clearStaleCacheTime() {
+  updateRefreshButton("outline-primary", "");
 }
 
 let staleCacheInterval = 0;
 
-function staleCacheTimer() {
-  // console.log("Cache data is stale");
-  updateStaleCacheTime();
+function setStaleCacheInterval() {
   staleCacheInterval = setInterval(updateStaleCacheTime, 10 * 1000);
 }
 
-function enableStaleCacheTimer() {
-  const elapsed = apiCacheAge();
-  const staleCacheMs = 1000 * 60 * 60; // 1 hour
-  const delay = Math.max(0, staleCacheMs - elapsed);
-  setTimeout(staleCacheTimer, delay);
+function clearStaleCacheInterval() {
+  if (staleCacheInterval) {
+    clearInterval(staleCacheInterval);
+    staleCacheInterval = 0;
+  }
 }
 
 // ---------------------------------------------------------
@@ -217,16 +229,8 @@ function refreshApiData() {
   const reload = load_complete;
   load_complete = false;
   viewing_cached_data = false;
-
-  if (staleCacheInterval) {
-    clearInterval(staleCacheInterval);
-    staleCacheInterval = 0;
-  }
-
-  const refresh = document.getElementById("btn_refresh");
-  const refreshLabel = document.getElementById("lbl_refresh");
-  refresh.className = "btn btn-outline-primary";
-  refreshLabel.innerText = "";
+  clearStaleCacheInterval();
+  clearStaleCacheTime();
 
   const title = document.createElement("h2");
   const titleText = document.createTextNode("Downloading scores...");
@@ -234,12 +238,17 @@ function refreshApiData() {
   document.getElementById("content").replaceChildren(title);
 
   const cacheTooOld = (apiCacheAge() > /*8 hours*/ 1000 * 60 * 60 * 8);
+  if (!reload && cacheTooOld) {
+    updateStaleCacheTime();
+  }
   loadApiData(reload || cacheTooOld)
     .then(([usernames, scores, level_meta]) => {
-      if (!viewing_cached_data) {
+      if (viewing_cached_data) {
+        updateStaleCacheTime();
+      } else {
         apiCacheUpdated();
       }
-      enableStaleCacheTimer();
+      setStaleCacheInterval();
       handleUsernames(usernames);
       handleScores(scores);
       handleLevelMeta(level_meta);
@@ -248,6 +257,7 @@ function refreshApiData() {
       loadHashPage();
     })
     .catch((error) => {
+      const refresh = document.getElementById("btn_refresh");
       refresh.className = "btn btn-danger";
       const title = document.createElement("h2");
       const titleText = document.createTextNode("Failed to load: " + error);
