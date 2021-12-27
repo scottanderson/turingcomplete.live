@@ -623,7 +623,8 @@ function showLevel(level_id) {
     ]);
   }
   const p90 = sorted_solvers[Math.floor(sorted_solvers.length * 0.90)];
-  const sum_limit = Math.min(99999, p90[1].sum / 0.90);
+  const first_sum = sorted_solvers[0][1].sum;
+  const sum_limit = (p90[1].sum == first_sum) ? 99999 : Math.min(99999, p90[1].sum / 0.90);
   for (const s in sorted_solvers) {
     const [solver_id, solver] = sorted_solvers[s];
     const solver_name = playerName(solver_id);
