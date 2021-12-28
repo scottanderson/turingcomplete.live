@@ -686,14 +686,8 @@ function showPlayer(player_id) {
   const headers = ["Level", "Place", "# tied", "nand", "delay", "tick", "sum"];
   const rows = [];
 
-  // Sort levels by number of solvers
-  const sorted_levels = Object.keys(levels).sort(function(x, y) {
-    const sx = Object.keys(levels[x]).length;
-    const sy = Object.keys(levels[y]).length;
-    if (sx < sy) return 1;
-    if (sx > sy) return -1;
-    return 0;
-  });
+  const sorted_levels = Object.keys(levels)
+    .sort((x, y) => metadata[x].sort_key - metadata[y].sort_key);
   const bookmarks = readBookmarks();
   const medals = {
     1: 0,
@@ -733,7 +727,9 @@ function showPlayer(player_id) {
         .filter(x => x.sum < sum)
         .length + 1;
     } else if (solved) {
-      place = "unscored";
+      place = "\u2705";
+    } else {
+      place = "\u{1F7E8}";
     }
     const level = {
       href: "#" + level_id,
