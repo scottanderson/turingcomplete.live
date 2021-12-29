@@ -693,6 +693,8 @@ function showPlayer(player_id) {
     1: 0,
     2: 0,
     3: 0,
+    4: 0,
+    5: 0,
   };
   for (const l in sorted_levels) {
     const level_id = sorted_levels[l];
@@ -728,8 +730,10 @@ function showPlayer(player_id) {
         .length + 1;
     } else if (solved) {
       place = "\u2705";
+      medals[4]++;
     } else {
       place = "\u{1F7E8}";
+      medals[5]++;
     }
     const level = {
       href: "#" + level_id,
@@ -752,7 +756,6 @@ function showPlayer(player_id) {
       sum
     ]);
   }
-  const medalsString = Object.entries(medals).map(([place, count]) => `${placeMedal(place)}x${count}`).join(' ')
 
   buildTable(heading, bookmark, headers, rows, (container) => {
     const div = document.createElement("div");
@@ -762,7 +765,11 @@ function showPlayer(player_id) {
     container.appendChild(div);
 
     const medalsDiv = document.createElement("div");
-    medalsDiv.innerHTML = medalsString;
+    const divText = document.createTextNode(Object.entries(medals)
+      .filter(([place, count]) => count > 0)
+      .map(([place, count]) => `${place == 4 ? "\u2705" : place == 5 ? "\u{1F7E8}" : placeMedal(place)}x${count}`)
+      .join(' '));
+    medalsDiv.appendChild(divText);
     container.appendChild(medalsDiv);
 
     const link = document.createElement("a");
