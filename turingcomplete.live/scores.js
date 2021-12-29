@@ -760,6 +760,7 @@ function showPlayer(player_id) {
   buildTable(heading, bookmark, headers, rows, (container) => {
     const div = document.createElement("div");
     const img = document.createElement("img");
+    img.classList.add('rounded');
     img.src = "https://turingcomplete.game/avatars/" + player_id + ".jpg";
     div.appendChild(img);
     container.appendChild(div);
@@ -801,9 +802,18 @@ function buildTable(heading, bookmark, headers, rows, extra) {
   tblHead.className = "sticky-top";
 
   const row = document.createElement("tr");
+  const separators = headers
+    .map((e, i) => [e, i])
+    .filter(([e, i]) => ["nand", "sum"].includes(e))
+    .map(([e, i]) => i)
+    .map(String);
 
   for (const h in headers) {
     const header = document.createElement("th");
+    header.classList.add('text-center');
+    if (separators.includes(h)) {
+      header.classList.add("border-start");
+    }
     header.appendChild(document.createTextNode(headers[h]));
     row.appendChild(header);
   }
@@ -818,6 +828,12 @@ function buildTable(heading, bookmark, headers, rows, extra) {
     for (const c in rows_r) {
       const rows_rc = rows_r[c];
       const cell = document.createElement("td");
+      if (separators.includes(c)) {
+        cell.classList.add("border-start");
+      }
+      if (c > 0) {
+        cell.classList.add('text-end');
+      }
       if (["string", "number"].includes(typeof rows_rc)) {
         const cellText = document.createTextNode(rows_rc);
         cell.appendChild(cellText);
