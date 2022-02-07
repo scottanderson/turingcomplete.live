@@ -274,7 +274,7 @@ async function loadApiData(reload) {
   const fetch = reload ? fetchWithCache : cacheWithFetch;
   const [usernamesResponse, scoresResponse, metadataResponse] = await Promise.all([
     fetch("https://turingcomplete.game/api_usernames"),
-    fetch("https://turingcomplete.game/api_scores"),
+    fetch("https://turingcomplete.game/api_score"),
     fetch("https://turingcomplete.game/api_level_meta"),
   ]);
   const usernames = await usernamesResponse.text();
@@ -328,16 +328,17 @@ function handleUsernames(data) {
 }
 
 function handleScores(data) {
-  // Server scores (user_id, level_id, nand, delay, tick)
+  // Server scores (user_id, level_id, nand, delay, tick, score_type, version)
   let scores_count = 0;
-  for (const match of data.matchAll(/\b(\d+),(\w+),(\d+),(\d+),(\d+)(\n|$)/g)) {
+  for (const match of data.matchAll(/\b(\d+),(\w+),(\d+),(\d+),(\d+),(\d+),(\d+)(\n|$)/g)) {
     scores_count++;
     const user_id = match[1];
-    const user_name = playerName(user_id);
     const level_id = match[2];
     const nand = parseInt(match[3]);
     const delay = parseInt(match[4]);
     const tick = parseInt(match[5]);
+    const score_type = parseInt(match[6]);
+    const version = parseInt(match[7]);
     if (!levels[level_id]) {
       levels[level_id] = {};
     }
@@ -346,6 +347,8 @@ function handleScores(data) {
       delay: delay,
       tick: tick,
       sum: nand + delay + tick,
+      score_type: score_type,
+      version: version,
     };
   }
   console.log("Read " + scores_count + " scores");
@@ -471,7 +474,10 @@ function showTopLevels(heading, top_levels) {
     if (bookmarks.includes(player_id)) {
       player.img = "bi bi-star";
     }
-    const s = top_levels.map(l => levels[l][player_id]).filter(Boolean);
+    const s = top_levels
+      .filter(l => player_id in levels[l])
+      .filter(l => levels[l][player_id].version == metadata[l].version)
+      .map(l => levels[l][player_id]);
     return {
       player: player,
       solved: s.length,
@@ -572,7 +578,7 @@ function showLevel(level_id) {
   document.title = "TC Leaderboard - " + level_name;
   const heading = "Leaderboard for " + level_name;
   const bookmark = createBookmark(level_id);
-  const headers = ["Player", "Place", "nand", "delay", "tick", "sum"];
+  const headers = ["Player", "Place", "Type", "Version", "nand", "delay", "tick", "sum"];
   const rows = [];
 
   // Sort solvers by lowest sum
@@ -582,6 +588,7 @@ function showLevel(level_id) {
 
   let solves = 0;
   let place = 1;
+  let placed_solves = 0;
   const bookmarks = readBookmarks();
   const data = [
     ["solver", "sum"]
@@ -589,21 +596,31 @@ function showLevel(level_id) {
   const ticksScored =
     metadata[level_id].scored &&
     metadata[level_id].arch;
+  const versioned =
+    metadata[level_id].version > 0;
+  if (!versioned) {
+    headers.splice(3, 1);
+  }
   for (const s in sorted_solvers) {
     if (++solves > 100) break; // Only show 100 results
 
     const [solver_id, solver] = sorted_solvers[s];
+    placed = metadata[level_id].version == solver.version;
+    if (placed) {
+      placed_solves++;
+    }
     const solver_name = playerName(solver_id);
     const nand = solver.nand;
     const delay = solver.delay;
     const tick = ticksScored ? solver.tick : "-";
     const sum = solver.sum;
+    const score_type = "Best " + ["sum", "nand", "delay", "tick"][solver.score_type];
 
     if (s > 0) {
       const [solver_id_above, solver_above] = sorted_solvers[s - 1];
       const sum_above = solver_above.sum;
       if (sum != sum_above) {
-        place = solves;
+        place = placed_solves;
       }
     }
     const player = {
@@ -613,15 +630,20 @@ function showLevel(level_id) {
     if (bookmarks.includes(solver_id)) {
       player.img = "bi bi-star";
     }
-    place = placeMedal(place);
-    rows.push([
+    const row = [
       player,
-      place,
+      placed ? placeMedal(place) : "-",
+      score_type,
+      solver.version,
       nand,
       delay,
       tick,
-      sum
-    ]);
+      sum,
+    ];
+    if (!versioned) {
+      row.splice(3, 1);
+    }
+    rows.push(row);
   }
   const p90 = sorted_solvers[Math.floor(sorted_solvers.length * 0.90)];
   const first_sum = sorted_solvers[0][1].sum;
@@ -700,6 +722,7 @@ function showPlayer(player_id) {
   for (const l in sorted_levels) {
     const level_id = sorted_levels[l];
     const level_name = levelName(level_id);
+    const level_version = metadata[level_id].version
     let place = "-",
       ties = "-",
       nand = "-",
@@ -726,9 +749,12 @@ function showPlayer(player_id) {
         .filter(x => x.sum == sum)
         .length;
       if (ties == 1) ties = "-";
-      place = solves
-        .filter(x => x.sum < sum)
-        .length + 1;
+      if (player_score.version == level_version) {
+        place = solves
+          .filter(x => x.sum < sum)
+          .filter(x => x.version == level_version)
+          .length + 1;
+      }
     } else if (solved) {
       place = "\u2705";
       medals[4]++;
@@ -832,12 +858,12 @@ function buildTable(heading, bookmark, headers, rows, extra) {
       if (separators.includes(c)) {
         cell.classList.add("border-start");
       }
-      if (c > 0) {
-        cell.classList.add('text-end');
-      }
       if (["string", "number"].includes(typeof rows_rc)) {
         const cellText = document.createTextNode(rows_rc);
         cell.appendChild(cellText);
+        if (typeof rows_rc == "number" || [...rows_rc].length == 1 && /^\p{Emoji}$/u.test(rows_rc)) {
+          cell.classList.add('text-end');
+        }
       } else {
         const cellText = document.createTextNode(rows_rc.text);
         if ("href" in rows_rc) {
