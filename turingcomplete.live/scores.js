@@ -319,7 +319,7 @@ async function cacheWithFetch(url) {
 // ---------------------------------------------------------
 function handleUsernames(data) {
   // Server id to username relationship
-  for (const match of data.matchAll(/(\d+),(.*)(\n|$)/g)) {
+  for (const match of data.matchAll(/\b(\d+),(.*)(\n|$)/g)) {
     const id = match[1];
     const name = match[2];
     user_ids[id] = name;
@@ -330,7 +330,7 @@ function handleUsernames(data) {
 function handleScores(data) {
   // Server scores (user_id, level_id, nand, delay, tick)
   let scores_count = 0;
-  for (const match of data.matchAll(/(\d+),(\w+),(\d+),(\d+),(\d+)(\n|$)/g)) {
+  for (const match of data.matchAll(/\b(\d+),(\w+),(\d+),(\d+),(\d+)(\n|$)/g)) {
     scores_count++;
     const user_id = match[1];
     const user_name = playerName(user_id);
@@ -352,16 +352,17 @@ function handleScores(data) {
 }
 
 function handleLevelMeta(level_meta) {
-  // Meta data for levels (enum_number, enum_id, title, is_architecture, no_score).
+  // Meta data for levels (enum_number, enum_id, title, is_architecture, no_score, level_version).
   // The order here is the same as on player profiles.
   let meta_count = 0;
-  for (const match of level_meta.matchAll(/(\d+),(\w+),([\s\w]*),(\w+),(\w+)(\n|$)/g)) {
+  for (const match of level_meta.matchAll(/\b(\d+),(\w+),([\s\w]*),(\w+),(\w+),(\d+)(\n|$)/g)) {
     const level_id = match[2];
     metadata[level_id] = {
       sort_key: parseInt(meta_count++),
       name: match[3],
       arch: match[4] === "true",
       scored: match[5] === "false",
+      version: match[6],
     };
   }
   console.log("Read " + meta_count + " levels");
