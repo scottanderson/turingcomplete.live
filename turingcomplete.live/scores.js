@@ -578,7 +578,7 @@ function showLevel(level_id) {
   document.title = "TC Leaderboard - " + level_name;
   const heading = "Leaderboard for " + level_name;
   const bookmark = createBookmark(level_id);
-  const headers = ["Player", "Place", "Type", "Version", "nand", "delay", "tick", "sum"];
+  const headers = ["Player", "Place", "Type", "nand", "delay", "tick", "sum"];
   const rows = [];
 
   // Sort solvers by lowest sum
@@ -596,11 +596,6 @@ function showLevel(level_id) {
   const ticksScored =
     metadata[level_id].scored &&
     metadata[level_id].arch;
-  const versioned =
-    metadata[level_id].version > 0;
-  if (!versioned) {
-    headers.splice(3, 1);
-  }
   for (const s in sorted_solvers) {
     if (++solves > 100) break; // Only show 100 results
 
@@ -614,7 +609,7 @@ function showLevel(level_id) {
     const delay = solver.delay;
     const tick = ticksScored ? solver.tick : "-";
     const sum = solver.sum;
-    const score_type = "Best " + ["sum", "nand", "delay", "tick"][solver.score_type];
+    const score_type = placed ? "Best " + ["sum", "nand", "delay", "tick"][solver.score_type] : "Legacy";
 
     if (s > 0) {
       const [solver_id_above, solver_above] = sorted_solvers[s - 1];
@@ -634,15 +629,11 @@ function showLevel(level_id) {
       player,
       placed ? placeMedal(place) : "-",
       score_type,
-      solver.version,
       nand,
       delay,
       tick,
       sum,
     ];
-    if (!versioned) {
-      row.splice(3, 1);
-    }
     rows.push(row);
   }
   const p90 = sorted_solvers[Math.floor(sorted_solvers.length * 0.90)];
