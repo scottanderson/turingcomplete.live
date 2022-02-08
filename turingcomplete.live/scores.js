@@ -338,6 +338,7 @@ function handleScores(data) {
     const delay = parseInt(match[4]);
     const tick = parseInt(match[5]);
     const score_type = parseInt(match[6]);
+    if (score_type != 0) continue; // TODO: Store multiple leaderboards
     const version = parseInt(match[7]);
     if (!levels[level_id]) {
       levels[level_id] = {};
