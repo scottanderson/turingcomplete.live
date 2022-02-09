@@ -338,17 +338,18 @@ function handleScores(data) {
     const delay = parseInt(match[4]);
     const tick = parseInt(match[5]);
     const score_type = parseInt(match[6]);
-    if (score_type != 0) continue; // TODO: Store multiple leaderboards
     const version = parseInt(match[7]);
-    if (!levels[level_id]) {
+    if (!(level_id in levels)) {
       levels[level_id] = {};
     }
-    levels[level_id][user_id] = {
+    if (!(score_type in levels[level_id])) {
+      levels[level_id][score_type] = {};
+    }
+    levels[level_id][score_type][user_id] = {
       nand: nand,
       delay: delay,
       tick: tick,
       sum: nand + delay + tick,
-      score_type: score_type,
       version: version,
     };
   }
@@ -399,15 +400,15 @@ function showLevels() {
   for (level_id in sorted_levels) {
     level_id = sorted_levels[level_id];
     const level_name = levelName(level_id);
-    const solvers = Object.keys(levels[level_id]);
-    const sums = solvers.map(x => levels[level_id][x].sum);
+    const solvers = Object.keys(levels[level_id][0]);
+    const sums = solvers.map(x => levels[level_id][0][x].sum);
     const scored = metadata[level_id].scored;
     const num_solvers = solvers.length;
     let min, median, first;
     if (scored) {
       min = Math.min(...sums);
       median = calculateMedian(sums);
-      first = solvers.filter((s) => levels[level_id][s].sum <= min);
+      first = solvers.filter(s => levels[level_id][0][s].sum <= min);
       if (first.length == 1) {
         first = playerName(first[0]);
       } else {
@@ -457,7 +458,7 @@ function showTopPlayers1k() {
 
   const top_levels = Object.keys(levels)
     .filter(l => metadata[l].scored) // Scored
-    .filter(l => Object.keys(levels[l]).length > 1000); // More than 1000 solvers
+    .filter(l => Object.keys(levels[l][0]).length > 1000); // More than 1000 solvers
 
   showTopLevels(heading, top_levels);
 }
@@ -476,9 +477,9 @@ function showTopLevels(heading, top_levels) {
       player.img = "bi bi-star";
     }
     const s = top_levels
-      .filter(l => player_id in levels[l])
-      .filter(l => levels[l][player_id].version == metadata[l].version)
-      .map(l => levels[l][player_id]);
+      .filter(l => player_id in levels[l][0])
+      .filter(l => levels[l][0][player_id].version == metadata[l].version)
+      .map(l => levels[l][0][player_id]);
     return {
       player: player,
       solved: s.length,
@@ -574,26 +575,51 @@ function showTopLevels(heading, top_levels) {
 
 // ---------------------------------------------------------
 function showLevel(level_id) {
+  let board_id = 0;
+  if (level_id.indexOf(";") != -1) {
+    [level_id, board_id] = level_id.split(";");
+    board_id = parseInt(board_id) || 0;
+  }
+  const board_types = ["sum", "nand", "delay", "tick"]
+  const board_type = board_types[board_id]
+
   activateLevelButton(level_id);
   const level_name = levelName(level_id);
   document.title = "TC Leaderboard - " + level_name;
   const heading = "Leaderboard for " + level_name;
   const bookmark = createBookmark(level_id);
   const headers = ["Player", "Place", "Type", "nand", "delay", "tick", "sum"];
+  for (b in board_types) {
+    if (b != board_id && b in levels[level_id]) {
+      let idx = headers.indexOf(board_types[b]);
+      headers[idx] = {
+        text: board_types[b],
+        href: "#" + (b == 0 ? level_id : level_id + ";" + b)
+      }
+    }
+  }
   const rows = [];
 
-  // Sort solvers by lowest sum
-  const sorted_solvers = Object.entries(levels[level_id]).sort(function([x, a], [y, b]) {
-    return a.sum - b.sum;
-  });
+  let board_sort;
+  if (board_id == 0) {
+    // Sort solvers by lowest sum
+    board_sort = ([x, a], [y, b]) => a.sum - b.sum;
+  } else if (board_id == 1) {
+    // Sort solvers by lowest nand, then sum
+    board_sort = ([x, a], [y, b]) => a.nand - b.nand || a.sum - b.sum;
+  } else if (board_id == 2) {
+    // Sort solvers by lowest delay, then sum
+    board_sort = ([x, a], [y, b]) => a.delay - b.delay || a.sum - b.sum;
+  } else if (board_id == 3) {
+    // Sort solvers by lowest tick, then sum
+    board_sort = ([x, a], [y, b]) => a.tick - b.tick || a.sum - b.sum;
+  }
+  const sorted_solvers = Object.entries(levels[level_id][board_id]).sort(board_sort);
 
   let solves = 0;
   let place = 1;
   let placed_solves = 0;
   const bookmarks = readBookmarks();
-  const data = [
-    ["solver", "sum"]
-  ];
   const ticksScored =
     metadata[level_id].scored &&
     metadata[level_id].arch;
@@ -610,7 +636,7 @@ function showLevel(level_id) {
     const delay = solver.delay;
     const tick = ticksScored ? solver.tick : "-";
     const sum = solver.sum;
-    const score_type = placed ? "Best " + ["sum", "nand", "delay", "tick"][solver.score_type] : "Legacy";
+    const score_type = (placed ? "Best " : "Legacy ") + board_type;
 
     if (s > 0) {
       const [solver_id_above, solver_above] = sorted_solvers[s - 1];
@@ -638,16 +664,28 @@ function showLevel(level_id) {
     rows.push(row);
   }
   const p90 = sorted_solvers[Math.floor(sorted_solvers.length * 0.90)];
-  const first_sum = sorted_solvers[0][1].sum;
-  const sum_limit = (p90[1].sum == first_sum) ? 99999 : Math.min(99999, p90[1].sum / 0.90);
+  const data = [["solver", board_type]];
+  let board_metric;
+  if (board_id == 0) {
+    board_metric = s => s.sum;
+  } else if (board_id == 1) {
+    board_metric = s => s.nand;
+  } else if (board_id == 2) {
+    board_metric = s => s.delay;
+  } else if (board_id == 3) {
+    board_metric = s => s.tick;
+  }
+  const first = board_metric(sorted_solvers[0][1]);
+  const p90m = board_metric(p90[1]);
+  const limit = (p90m == first) ? 99999 : Math.min(99999, p90m / 0.90);
   for (const s in sorted_solvers) {
     const [solver_id, solver] = sorted_solvers[s];
     const solver_name = playerName(solver_id);
-    const sum = solver.sum;
-    if (sum >= sum_limit) break;
+    const metric = board_metric(solver);
+    if (metric >= limit) break;
     data.push([
       solver_name,
-      sum
+      metric,
     ]);
   }
 
@@ -721,16 +759,16 @@ function showPlayer(player_id) {
       delay = "-",
       tick = "-",
       sum = "-";
-    const solved = (player_id in levels[level_id]);
-    const solves = Object.keys(levels[level_id])
-      .map(x => levels[level_id][x]);
+    const solved = (player_id in levels[level_id][0]);
+    const solves = Object.keys(levels[level_id][0])
+      .map(x => levels[level_id][0][x]);
     const ticksScored =
       metadata[level_id].scored &&
       metadata[level_id].arch;
     const scored =
       metadata[level_id].scored;
     if (solved && scored) {
-      const player_score = levels[level_id][player_id];
+      const player_score = levels[level_id][0][player_id];
       nand = player_score.nand;
       delay = player_score.delay;
       if (ticksScored) {
@@ -822,6 +860,7 @@ function buildTable(heading, bookmark, headers, rows, extra) {
 
   const row = document.createElement("tr");
   const separators = headers
+    .map(e => e?.text || e)
     .map((e, i) => [e, i])
     .filter(([e, i]) => ["nand", "sum"].includes(e))
     .map(([e, i]) => i)
@@ -833,7 +872,20 @@ function buildTable(heading, bookmark, headers, rows, extra) {
     if (separators.includes(h)) {
       header.classList.add("border-start");
     }
-    header.appendChild(document.createTextNode(headers[h]));
+    if (["string", "number"].includes(typeof headers[h])) {
+      const headerText = document.createTextNode(headers[h]);
+      header.appendChild(headerText);
+    } else {
+      const headerText = document.createTextNode(headers[h].text);
+      if ("href" in headers[h]) {
+        const a = document.createElement("a");
+        a.href = headers[h].href;
+        a.appendChild(headerText);
+        header.appendChild(a);
+      } else {
+        header.appendChild(headerText);
+      }
+    }
     row.appendChild(header);
   }
 
