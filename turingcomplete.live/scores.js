@@ -400,10 +400,12 @@ function showLevels() {
   for (level_id in sorted_levels) {
     level_id = sorted_levels[level_id];
     const level_name = levelName(level_id);
-    const solvers = Object.keys(levels[level_id][0]);
+    const level_version = metadata[level_id].version;
+    const all_solvers = Object.keys(levels[level_id][0]);
+    const solvers = all_solvers.filter(s => levels[level_id][0][s].version == level_version);
     const sums = solvers.map(x => levels[level_id][0][x].sum);
     const scored = metadata[level_id].scored;
-    const num_solvers = solvers.length;
+    const num_solvers = all_solvers.length;
     let min, median, first;
     if (scored) {
       min = Math.min(...sums);
@@ -752,7 +754,7 @@ function showPlayer(player_id) {
   for (const l in sorted_levels) {
     const level_id = sorted_levels[l];
     const level_name = levelName(level_id);
-    const level_version = metadata[level_id].version
+    const level_version = metadata[level_id].version;
     let place = "-",
       ties = "-",
       nand = "-",
